@@ -1,0 +1,3 @@
+streamlit>=1.30.0
+python-docx>=1.1.0
+docxtpl>=0.16.7
