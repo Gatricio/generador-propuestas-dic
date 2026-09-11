@@ -83,7 +83,7 @@ with tab2:
         else:
             with st.spinner("Redactando propuesta técnica en lenguaje de ingeniería contractual..."):
                 try:
-                    # Búsqueda robusta de la API Key en Streamlit Secrets o entorno
+                    # Búsqueda de la API Key
                     api_key = None
                     if "GEMINI_API_KEY" in st.secrets:
                         api_key = st.secrets["GEMINI_API_KEY"]
@@ -117,8 +117,8 @@ with tab2:
                         (Propón el desglose ordenado por etapas para la Sección 6 'Actividades', agrupando los conceptos en Etapa A: Análisis de Pertinencia y Línea Base, Etapa B: Evaluación de Plazo o Costos según corresponda, y Etapa C/D: Elaboración de Informe Técnico Final).
                         """
                         
-                        # Iteración por modelos compatibles vigentes
-                        modelos_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+                        # Lista de nombres exactos soportados por la API
+                        modelos_probar = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-pro']
                         response = None
                         last_err = ""
                         
@@ -133,7 +133,7 @@ with tab2:
                                 continue
 
                         if response is None or not hasattr(response, 'text') or not response.text:
-                            st.error(f"No se pudo obtener respuesta de la API. Detalle del error: {last_err}")
+                            st.error(f"No se pudo conectar con el servicio. Detalle: {last_err}")
                         else:
                             texto_res = response.text
                             if "SECCION_ACTIVIDADES:" in texto_res:
