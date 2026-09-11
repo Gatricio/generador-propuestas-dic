@@ -19,8 +19,45 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header">IDIEM — UNIVERSIDAD DE CHILE</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">División de Ingeniería Contractual | Generador Web de Ofertas Técnicas y Peritajes</div>', unsafe_allow_html=True)
+# ---------------------------------------------------------
+# SISTEMA DE AUTENTICACIÓN / LOGIN
+# ---------------------------------------------------------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+def check_login():
+    user = st.session_state.get("input_user", "").strip()
+    pwd = st.session_state.get("input_pwd", "").strip()
+    
+    if user == "idiem.dic" and pwd == "2343":
+        st.session_state.authenticated = True
+    else:
+        st.session_state.authenticated = False
+        st.error("Usuario o contraseña incorrectos.")
+
+if not st.session_state.authenticated:
+    st.markdown('<div class="main-header">IDIEM — UNIVERSIDAD DE CHILE</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">División de Ingeniería Contractual | Acceso Privado</div>', unsafe_allow_html=True)
+    
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        st.subheader("🔒 Iniciar Sesión")
+        st.text_input("Usuario:", key="input_user")
+        st.text_input("Contraseña:", type="password", key="input_pwd")
+        st.button("Ingresar", on_click=check_login)
+    st.stop()
+
+# ---------------------------------------------------------
+# APLICACIÓN PRINCIPAL (ACCESO PERMITIDO)
+# ---------------------------------------------------------
+col_title, col_logout = st.columns([5, 1])
+with col_title:
+    st.markdown('<div class="main-header">IDIEM — UNIVERSIDAD DE CHILE</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">División de Ingeniería Contractual | Generador Web de Ofertas Técnicas y Peritajes</div>', unsafe_allow_html=True)
+with col_logout:
+    if st.button("Cerrar Sesión"):
+        st.session_state.authenticated = False
+        st.rerun()
 
 tab1, tab2, tab3, tab4 = st.tabs([
     "1. Identificación y Tipo", 
@@ -54,7 +91,7 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value=default_prop_title)
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO (Motor Lógico Local)
+# PESTAÑA 2: ALCANCE Y CONTEXTO
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
