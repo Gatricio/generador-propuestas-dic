@@ -91,66 +91,74 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value=default_prop_title)
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO (Input: 4 y 6 | Output: 5)
+# PESTAÑA 2: ALCANCE Y CONTEXTO (Input: 4 y 5 | Output: 6)
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
     
-    if "auto_alcance" not in st.session_state:
-        st.session_state.auto_alcance = ""
+    if "auto_actividades" not in st.session_state:
+        st.session_state.auto_actividades = ""
 
-    # Inputs escritos por el usuario
+    # Inputs escritos/ingresados por el usuario
     intro = st.text_area(
         "4. Introducción / Contexto de la Obra (Input Usuario):", 
         value="", 
-        placeholder="Ingrese el contexto del proyecto, las partes involucradas y la controversia técnica...", 
-        height=140
+        placeholder="Ingrese la introducción del caso, contexto del proyecto y controversia...", 
+        height=130
     )
     
-    actividades = st.text_area(
-        "6. Actividades / Etapas Propuestas (Input Usuario):", 
+    alcance = st.text_area(
+        "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba - Input Usuario):", 
         value="", 
-        placeholder="Ingrese el desglose de etapas y actividades propuestas para el servicio...", 
-        height=160
+        placeholder="Escriba o pegue el punteo de los conceptos a evaluar o Puntos de Prueba. Ej:\n- Análisis de mayores gastos generales extraproporcionales\n- Impacto en plazo sobre ruta crítica (TIA)\n- Reajuste polinómico", 
+        height=140
     )
 
     st.markdown("---")
-    st.markdown("### ⚡ Generación Automática del Alcance Detallado")
-    st.caption("Presione el botón para sintetizar automáticamente los puntos clave del Alcance (Sección 5) con base en la Introducción y Actividades ingresadas arriba.")
+    st.markdown("### ⚡ Generación Automática de Actividades / Etapas")
+    st.caption("Presione el botón para estructurar automáticamente el desglose de Actividades (Sección 6) con base en la Introducción y el Alcance ingresados.")
 
-    if st.button("⚙️ Generar 5. Alcance Detallado"):
-        if not intro.strip() and not actividades.strip():
-            st.warning("Por favor ingrese texto en la Introducción o en las Actividades antes de generar el Alcance.")
+    if st.button("⚙️ Generar 6. Actividades / Etapas Propuestas"):
+        if not intro.strip() and not alcance.strip():
+            st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar las Actividades.")
         else:
-            # Lógica de extracción/síntesis basada en las Secciones 4 y 6
-            conceptos = []
-            texto_combinado = (intro + " " + actividades).lower()
+            texto_base = (intro + " " + alcance).lower()
             
-            if "plazo" in texto_combinado or "atraso" in texto_combinado or "critica" in texto_combinado or "tia" in texto_combinado:
-                conceptos.append("• Análisis forense de plazo e impacto en la ruta crítica contractual.")
-            if "gasto" in texto_combinado or "costo" in texto_combinado or "sobrecosto" in texto_combinado or "general" in texto_combinado:
-                conceptos.append("• Auditoría y cuantificación de mayores costos directos y gastos generales extraproporcionales.")
-            if "reajuste" in texto_combinado or "polinom" in texto_combinado or "precio" in texto_combinado:
-                conceptos.append("• Evaluación de la reajustabilidad de precios y aplicación de fórmulas polinómicas.")
-            if "pertinencia" in texto_combinado or "linea base" in texto_combinado or "contrato" in texto_combinado:
-                conceptos.append("• Verificación de pertinencia técnica de las reclamaciones y revisión de la línea base contractual.")
-            if "imparcial" in texto_combinado or "cam" in texto_combinado or "arbitral" in texto_combinado or "peritaje" in texto_combinado:
-                conceptos.append("• Evaluación técnica imparcial de los Puntos de Prueba fijados en el proceso.")
-                
-            if not conceptos:
-                conceptos.append("• Evaluación técnica e independiente de los antecedentes contractuales y de terreno aportados por las partes.")
-                conceptos.append("• Cuantificación empírica de las variaciones e impactos alegados en la ejecución de la obra.")
+            # Generar Etapas Estructuradas automáticamente
+            act_list = [
+                "Etapa A: Recopilación, Auditoría Documental y Línea Base Contractual",
+                "  • Auditoría e inventario sistemático de la documentación técnica y contractual del proyecto.",
+                "  • Revisión de la línea base contractual y verificación de la pertinencia técnica de las reclamaciones."
+            ]
+            
+            # Etapa B: Ajustada dinámicamente según palabras clave detectadas
+            act_list.append("\nEtapa B: Análisis Técnico Especializado y Cuantificación de Impactos")
+            
+            if any(k in texto_base for k in ["plazo", "atraso", "critica", "tia", "cronograma"]):
+                act_list.append("  • Análisis forense de plazo e impacto en la ruta crítica mediante metodología Time Impact Analysis (TIA).")
+            if any(k in texto_base for k in ["gasto", "costo", "sobrecosto", "general", "directo"]):
+                act_list.append("  • Auditoría y cuantificación empírica de mayores costos directos y gastos generales extraproporcionales.")
+            if any(k in texto_base for k in ["reajuste", "polinom", "precio", "indice"]):
+                act_list.append("  • Evaluación de la reajustabilidad de precios y aplicación de fórmulas polinómicas contractuales.")
+            if not any(k in texto_base for k in ["plazo", "gasto", "costo", "reajuste"]):
+                act_list.append("  • Evaluación técnica independiente y fundada de las discrepancias señaladas en el alcance.")
 
-            st.session_state.auto_alcance = "\n".join(conceptos)
-            st.success("¡Alcance Detallado generado exitosamente!")
+            act_list.extend([
+                "\nEtapa C: Elaboración y Emisión de Entregables",
+                "  • Elaboración y revisión del Informe Técnico Borrador.",
+                "  • Emisión del Informe Técnico Final firmado para entrega al Cliente / Tribunal."
+            ])
+            
+            st.session_state.auto_actividades = "\n".join(act_list)
+            st.success("¡Actividades y Etapas generadas exitosamente!")
 
     st.markdown("---")
-    # Output generado automáticamente ( editable opcionalmente)
-    alcance = st.text_area(
-        "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba - Output Generado):", 
-        value=st.session_state.auto_alcance, 
-        placeholder="Aquí se desplegará automáticamente el Alcance Detallado sintetizado...", 
-        height=140
+    # Output generado automáticamente (editable por el usuario)
+    actividades = st.text_area(
+        "6. Actividades / Etapas Propuestas (Output Generado):", 
+        value=st.session_state.auto_actividades, 
+        placeholder="Aquí se desplegarán automáticamente las Actividades estructuradas por Etapas...", 
+        height=180
     )
 
 # ---------------------------------------------------------
@@ -165,49 +173,41 @@ with tab3:
     with col_hdr2: st.markdown("**HH / Mes**")
     with col_hdr3: st.markdown("**Tarifa (UF/HH)**")
 
-    # 1. Asesor Técnico
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Asesor Técnico / Revisor")
     with c2: hh_asesor = st.number_input("HH Asesor", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_asesor = st.number_input("Tarifa Asesor", min_value=0.0, value=2.0, step=0.1, label_visibility="collapsed")
 
-    # 2. Jefe de Proyecto
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Jefe de Proyecto / Asesoría")
     with c2: hh_jefe = st.number_input("HH Jefe", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_jefe = st.number_input("Tarifa Jefe", min_value=0.0, value=1.5, step=0.1, label_visibility="collapsed")
 
-    # 3. Profesional 1
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 1")
     with c2: hh_an1 = st.number_input("HH Profesional 1", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_an1 = st.number_input("Tarifa Prof. 1", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
-    # 4. Profesional 2
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 2")
     with c2: hh_an2 = st.number_input("HH Profesional 2", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_an2 = st.number_input("Tarifa Prof. 2", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
-    # 5. Profesional 3
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 3")
     with c2: hh_an3 = st.number_input("HH Profesional 3", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_an3 = st.number_input("Tarifa Prof. 3", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
-    # 6. Profesional 4
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 4")
     with c2: hh_an4 = st.number_input("HH Profesional 4", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_an4 = st.number_input("Tarifa Prof. 4", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
-    # 7. Profesional 5
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 5")
     with c2: hh_an5 = st.number_input("HH Profesional 5", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_an5 = st.number_input("Tarifa Prof. 5", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
-    # Totales
     tot_hh = (hh_asesor + hh_jefe + hh_an1 + hh_an2 + hh_an3 + hh_an4 + hh_an5) * meses_val
     tot_uf = (
         hh_asesor * tar_asesor + 
@@ -230,27 +230,22 @@ with tab4:
     
     st.markdown("#### Configuración de Hitos de Pago (Título y Porcentaje)")
     
-    # Hito 1
     col_t1, col_p1 = st.columns([3, 1])
     with col_t1: titulo_h1 = st.text_input("Título Hito 1:", value="Anticipo / Orden de Compra")
     with col_p1: pct_h1 = st.number_input("% Hito 1:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 50)
 
-    # Hito 2
     col_t2, col_p2 = st.columns([3, 1])
     with col_t2: titulo_h2 = st.text_input("Título Hito 2:", value="Entrega del Informe de Pertinencia")
     with col_p2: pct_h2 = st.number_input("% Hito 2:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 0)
 
-    # Hito 3
     col_t3, col_p3 = st.columns([3, 1])
     with col_t3: titulo_h3 = st.text_input("Título Hito 3:", value="Entrega del Informe Borrador")
     with col_p3: pct_h3 = st.number_input("% Hito 3:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 0)
 
-    # Hito 4
     col_t4, col_p4 = st.columns([3, 1])
     with col_t4: titulo_h4 = st.text_input("Título Hito 4:", value="Entrega del Informe Final / Firmado")
     with col_p4: pct_h4 = st.number_input("% Hito 4:", min_value=0, max_value=100, value=10 if "Parte" in tipo_encargo else 50)
 
-    # Hito 5
     col_t5, col_p5 = st.columns([3, 1])
     with col_t5: titulo_h5 = st.text_input("Título Hito 5 (Opcional):", value="Aprobación Final / Cierre")
     with col_p5: pct_h5 = st.number_input("% Hito 5:", min_value=0, max_value=100, value=0)
@@ -261,7 +256,6 @@ with tab4:
     else:
         st.success("Estructura de pagos válida (Suma 100%).")
 
-    # Construcción dinámica del texto para la plantilla
     hitos_list = []
     if pct_h1 > 0: hitos_list.append(f"{pct_h1}% contra {titulo_h1}")
     if pct_h2 > 0: hitos_list.append(f"{pct_h2}% contra {titulo_h2}")
