@@ -65,9 +65,9 @@ with tab2:
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
 
-    # 5. Alcance Detallado primero para usarlo de input
+    # 4. Alcance Detallado primero para usarlo de input
     alcance = st.text_area(
-        "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba):", 
+        "4. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba):", 
         value="", 
         placeholder="Escriba o pegue un punteo de los conceptos a evaluar. Ej:\n- Análisis de mayores gastos generales extraproporcionales\n- Análisis de sobretiempo y pérdida de productividad\n- Actualización de precios mediante fórmula polinómica\n- Análisis forense de plazo (Time Impact Analysis)", 
         height=140
@@ -79,7 +79,7 @@ with tab2:
 
     if st.button("🤖 Redactar Introducción y Actividades a partir del Alcance"):
         if not alcance.strip():
-            st.warning("Por favor escriba al menos un concepto en el campo '5. Alcance Detallado' antes de generar.")
+            st.warning("Por favor escriba al menos un concepto en el campo '4. Alcance Detallado' antes de generar.")
         else:
             with st.spinner("Redactando propuesta técnica en lenguaje de ingeniería contractual..."):
                 try:
@@ -103,7 +103,7 @@ with tab2:
                         Debes devolver exactamente este formato de dos secciones:
                         
                         SECCION_INTRO:
-                        (Redacta un párrafo continuo formal para la Sección 4 'Introducción' introduciendo el proyecto, la solicitud de estudio y el contexto contractual de las discrepancias basadas en los conceptos a evaluar).
+                        (Redacta un párrafo continuo formal para la Sección 5 'Introducción' introduciendo el proyecto, la solicitud de estudio y el contexto contractual de las discrepancias basadas en los conceptos a evaluar).
                         
                         SECCION_ACTIVIDADES:
                         (Propón el desglose ordenado por etapas para la Sección 6 'Actividades', agrupando los conceptos en Etapa A: Análisis de Pertinencia y Línea Base, Etapa B: Evaluación de Plazo o Costos según corresponda, y Etapa C/D: Elaboración de Informe Técnico Final).
@@ -126,7 +126,7 @@ with tab2:
                     st.error(f"Error al generar con IA: {e}")
 
     st.markdown("---")
-    intro = st.text_area("4. Introducción / Contexto de la Obra:", value=st.session_state.auto_intro, placeholder="Ingrese o genere la introducción del caso...", height=130)
+    intro = st.text_area("5. Introducción / Contexto de la Obra:", value=st.session_state.auto_intro, placeholder="Ingrese o genere la introducción del caso...", height=130)
     actividades = st.text_area("6. Actividades / Etapas Propuestas:", value=st.session_state.auto_actividades, placeholder="Ingrese o genere las etapas del estudio...", height=150)
 
 # ---------------------------------------------------------
