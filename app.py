@@ -1,9 +1,7 @@
-import os
 import datetime
 from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
-from google import genai
 
 # Configuración inicial de Streamlit
 st.set_page_config(
@@ -56,7 +54,7 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value=default_prop_title)
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO
+# PESTAÑA 2: ALCANCE Y CONTEXTO (Motor Lógico Local)
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
@@ -69,77 +67,67 @@ with tab2:
     alcance = st.text_area(
         "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba):", 
         value="", 
-        placeholder="Escriba o pegue un punteo de los conceptos a evaluar. Ej:\n- Análisis de mayores gastos generales extraproporcionales\n- Análisis de sobretiempo y pérdida de productividad\n- Actualización de precios mediante fórmula polinómica\n- Análisis forense de plazo (Time Impact Analysis)", 
+        placeholder="Escriba o pegue el punteo de los conceptos a evaluar. Ej:\n- Análisis de mayores gastos generales extraproporcionales\n- Análisis de impacto en plazo sobre la ruta crítica (TIA)\n- Reajustabilidad de precios y actualización polinómica", 
         height=140
     )
 
     st.markdown("---")
-    st.markdown("### ⚡ Generación Inteligente de Texto (Opcional)")
-    st.caption("Con base en los conceptos ingresados arriba en el Alcance, la IA redactará automáticamente el contexto formal de la Introducción y el desglose de Actividades.")
+    st.markdown("### ⚡ Generación Dinámica Estándar")
+    st.caption("Presione el botón para estructurar automáticamente la Introducción y las Actividades según los datos del Alcance ingresados.")
 
-    if st.button("🤖 Redactar Introducción y Actividades a partir del Alcance"):
+    if st.button("⚙️ Generar Redacción Técnica Automática"):
         if not alcance.strip():
-            st.warning("Por favor escriba al menos un concepto en el campo '5. Alcance Detallado' antes de generar.")
+            st.warning("Por favor ingrese los conceptos en '5. Alcance Detallado' antes de generar.")
         else:
-            with st.spinner("Redactando propuesta técnica en lenguaje de ingeniería contractual..."):
-                try:
-                    api_key = None
-                    if "GEMINI_API_KEY" in st.secrets:
-                        api_key = st.secrets["GEMINI_API_KEY"]
-                    elif "gemini_api_key" in st.secrets:
-                        api_key = st.secrets["gemini_api_key"]
-                    else:
-                        api_key = os.environ.get("GEMINI_API_KEY", "")
-
-                    if not api_key:
-                        st.error("Error: No se encontró 'GEMINI_API_KEY' en los Secrets de Streamlit Cloud.")
-                    else:
-                        client = genai.Client(api_key=api_key)
-                        
-                        prompt_conceptos = f"""
-                        Actúa como un Perito e Ingeniero experto de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
-                        
-                        DATOS DEL PROYECTO:
-                        - Tipo de encargo: {tipo_encargo}
-                        - Nombre del proyecto: {nombre_proyecto if nombre_proyecto else 'el proyecto en estudio'}
-                        - Conceptos a evaluar (Alcance):
-                        {alcance}
-                        
-                        INSTRUCCIONES:
-                        Genera una propuesta técnica formal manteniendo un tono neutral, estrictamente técnico e imparcial. 
-                        Debes devolver exactamente este formato de dos secciones:
-                        
-                        SECCION_INTRO:
-                        (Redacta un párrafo continuo formal para la Sección 4 'Introducción' introduciendo el proyecto, la solicitud de estudio y el contexto contractual de las discrepancias basadas en los conceptos a evaluar).
-                        
-                        SECCION_ACTIVIDADES:
-                        (Propón el desglose ordenado por etapas para la Sección 6 'Actividades', agrupando los conceptos en Etapa A: Análisis de Pertinencia y Línea Base, Etapa B: Evaluación de Plazo o Costos según corresponda, y Etapa C/D: Elaboración de Informe Técnico Final).
-                        """
-                        
-                        response = client.models.generate_content(
-                            model='gemini-2.5-flash',
-                            contents=prompt_conceptos
-                        )
-                        
-                        if response and response.text:
-                            texto_res = response.text
-                            if "SECCION_ACTIVIDADES:" in texto_res:
-                                partes = texto_res.split("SECCION_ACTIVIDADES:")
-                                st.session_state.auto_intro = partes[0].replace("SECCION_INTRO:", "").strip()
-                                st.session_state.auto_actividades = partes[1].strip()
-                            else:
-                                st.session_state.auto_intro = texto_res
-                                st.session_state.auto_actividades = ""
-                                
-                            st.success("¡Introducción y Actividades generadas correctamente!")
-                        else:
-                            st.error("No se pudo obtener respuesta del modelo.")
-                except Exception as e:
-                    st.error(f"Error durante la generación con la SDK de GenAI: {e}")
+            proj_ref = nombre_proyecto if nombre_proyecto else "la obra en referencia"
+            client_ref = cliente if cliente else "el Cliente"
+            
+            # Generar Introducción Dinámica
+            if "CAM" in tipo_encargo:
+                st.session_state.auto_intro = (
+                    f"En el marco del proceso arbitral correspondiente a {rol_cam if rol_cam else 'la causa de la referencia'}, "
+                    f"relativo al contrato de ejecución de la obra '{proj_ref}', el Tribunal Arbitral ha encomendado a IDIEM "
+                    f"la realización de un peritaje técnico imparcial. El presente estudio tiene por objeto analizar de manera empírica "
+                    f"y fundada los puntos de prueba fijados, referidos principalmente a: {alcance.replace('\n', ', ')}."
+                )
+            else:
+                st.session_state.auto_intro = (
+                    f"Mediante solicitud presentada por {client_ref}, se ha encomendado a la División de Ingeniería Contractual de IDIEM "
+                    f"la elaboración de un informe técnico independiente referente al desarrollo del proyecto '{proj_ref}'. "
+                    f"Durante la ejecución de las obras han surgido discrepancias contractuales entre las partes, por lo que el presente estudio "
+                    f"evaluará técnicamente la pertinencia y cuantificación de las materias reclamadas, considerando: {alcance.replace('\n', ', ')}."
+                )
+            
+            # Generar Actividades Dinámicas por Etapas
+            act_list = [
+                "Etapa A: Recopilación, Auditoría Documental y Línea Base Contractual",
+                "  • Auditoría e inventario de la documentación del proyecto (contrato, libro de obras, correspondencia y estados de pago).",
+                "  • Análisis de la línea base contractual y verificación de pertinencia técnica de los eventos.",
+                "\nEtapa B: Análisis Técnico Especializado y Cuantificación de Impactos"
+            ]
+            
+            alcance_lower = alcance.lower()
+            if "plazo" in alcance_lower or "tia" in alcance_lower or "atraso" in alcance_lower:
+                act_list.append("  • Análisis de impacto en plazo sobre la ruta crítica utilizando metodologías forenses (Time Impact Analysis).")
+            if "gasto" in alcance_lower or "costo" in alcance_lower or "sobrecosto" in alcance_lower:
+                act_list.append("  • Auditoría y cuantificación de mayores costos directos y gastos generales extraproporcionales.")
+            if "reajuste" in alcance_lower or "precio" in alcance_lower or "polinom" in alcance_lower:
+                act_list.append("  • Evaluación de la aplicación del mecanismo de reajustabilidad y fórmulas polinómicas.")
+            if not any(k in alcance_lower for k in ["plazo", "gasto", "costo", "reajuste"]):
+                act_list.append("  • Evaluación empírica y fundada de los conceptos técnicos detallados en el alcance.")
+                
+            act_list.extend([
+                "\nEtapa C: Elaboración y Emisión de Entregables",
+                "  • Redacción del informe técnico borrador para revisión interna / contraparte.",
+                "  • Emisión del Informe Técnico Final en formato digital respaldado."
+            ])
+            
+            st.session_state.auto_actividades = "\n".join(act_list)
+            st.success("¡Textos redactados y estructurados exitosamente!")
 
     st.markdown("---")
     intro = st.text_area("4. Introducción / Contexto de la Obra:", value=st.session_state.auto_intro, placeholder="Ingrese o genere la introducción del caso...", height=130)
-    actividades = st.text_area("6. Actividades / Etapas Propuestas:", value=st.session_state.auto_actividades, placeholder="Ingrese o genere las etapas del estudio...", height=150)
+    actividades = st.text_area("6. Actividades / Etapas Propuestas:", value=st.session_state.auto_actividades, placeholder="Ingrese o genere las etapas del estudio...", height=160)
 
 # ---------------------------------------------------------
 # PESTAÑA 3: HORAS HOMBRE Y PERFILES
