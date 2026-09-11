@@ -91,7 +91,7 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value=default_prop_title)
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO (Input: 4 y 5 | Output: 6)
+# PESTAÑA 2: ALCANCE Y CONTEXTO (Exhaustivo según estándar MOP/IDIEM)
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
@@ -109,74 +109,151 @@ with tab2:
     alcance = st.text_area(
         "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba - Input Usuario):", 
         value="", 
-        placeholder="Escriba o pegue el punteo de los conceptos a evaluar. Ej:\n- Obras extraordinarias y adicionales\n- Pérdida de productividad por paralizaciones\n- Gastos generales extraproporcionales\n- Reajuste y valores proforma", 
+        placeholder="Escriba o pegue los conceptos a evaluar. Ej:\n- Obras extraordinarias y modificaciones de proyecto\n- Pérdida de productividad por paralización o falta de equipos\n- Garantías, anticipo y retrasos en devolución\n- Aplicabilidad de multas, reajuste polinómico y valores proforma\n- Levantamiento de observaciones en recepción de obra", 
         height=140
     )
 
     st.markdown("---")
-    st.markdown("### ⚡ Generación Automática de Actividades / Etapas")
-    st.caption("Presione el botón para estructurar automáticamente el desglose de Actividades (Sección 6) en el formato pericial estándar de IDIEM.")
+    st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial Completo)")
+    st.caption("Presione el botón para generar automáticamente la redacción exhaustiva de Actividades (Sección 6) por etapas A, B, C y D.")
 
-    if st.button("⚙️ Generar 6. Actividades / Etapas Propuestas"):
+    if st.button("⚙️ Generar 6. Actividades Extensas"):
         if not intro.strip() and not alcance.strip():
             st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar las Actividades.")
         else:
             txt_comb = (intro + " " + alcance).lower()
+            client_ref = cliente if cliente else "el Cliente / Consorcio"
             
             act_blocks = []
             act_blocks.append("Para desarrollar el alcance, se contempla desarrollar las siguientes etapas y actividades:\n")
             
-            # ETAPA A
+            # --- ETAPA A ---
             act_blocks.append("Etapa A: Análisis de pertinencia de las situaciones reclamadas\n")
+            
             act_blocks.append("A.1 Análisis de antecedentes de la obra contratada")
-            act_blocks.append("Considera la revisión y análisis de los antecedentes contractuales (bases de licitación, especificaciones técnicas, presupuesto de la oferta, aclaraciones y respuestas) para establecer la línea base del contrato en relación a los conceptos reclamados.\n")
+            act_blocks.append(
+                "Considera la revisión y análisis de los antecedentes contractuales, tales como las Bases de licitación, "
+                "especificaciones técnicas, términos de referencia, presupuesto de la oferta, aclaraciones, consultas y respuestas, "
+                f"entre otros documentos proporcionados por {client_ref} que estén disponibles para su revisión, para establecer la línea base "
+                "del contrato en relación a los conceptos reclamados.\n"
+            )
             
             act_blocks.append("A.2 Análisis de los convenios modificatorios")
-            act_blocks.append("Se revisarán los convenios modificatorios y antecedentes disponibles para determinar los días correspondientes a aumentos de plazo extraproporcionales y verificar la procedencia técnica de sus circunstancias de origen.\n")
+            act_blocks.append(
+                "En esta etapa se revisarán los convenios modificatorios y demás antecedentes contractuales disponibles, "
+                "con el propósito de identificar y determinar los días correspondientes a aumentos de plazo extra proporcionales. "
+                "Para cada uno de estos aumentos, IDIEM analizará los antecedentes técnicos, contractuales y de ejecución de las obras "
+                "que permitan identificar las circunstancias que efectivamente dieron origen a su otorgamiento, evaluando su correspondencia "
+                "con las condiciones y hechos verificados durante el desarrollo del contrato. Asimismo, se evaluará la procedencia "
+                "y justificación técnica de cada aumento de plazo, considerando su relación con las actividades afectadas, las condiciones "
+                f"de ejecución y los antecedentes que sustenten su reconocimiento. Será responsabilidad de {client_ref} proporcionar "
+                "oportunamente la información y documentación necesaria para realizar dicho análisis y sustentar las circunstancias que habrían "
+                "dado origen a cada uno de los aumentos de plazo extra proporcionales.\n"
+            )
             
             act_blocks.append("A.3 Análisis y validación de las situaciones reclamadas")
-            act_blocks.append("Se analizarán los registros documentales de obra para constatar la existencia y afectaciones asociadas a los siguientes conceptos:")
+            act_blocks.append(
+                "Se considerará la revisión y análisis de los registros documentales de la obra, con el propósito de constatar la existencia "
+                "de las situaciones reclamadas respecto de la línea base establecida en A.1, así como determinar sus eventuales "
+                f"afectaciones directas e indirectas. De acuerdo con las situaciones indicadas por {client_ref}, se desarrollarán "
+                "los siguientes análisis específicos:\n"
+            )
             
             if "obra" in txt_comb or "adicional" in txt_comb or "extraordinaria" in txt_comb:
-                act_blocks.append("  • Obras extraordinarias y modificaciones de proyecto: Verificación de pertinencia respecto al alcance original.")
+                act_blocks.append("Obras extraordinarias:")
+                act_blocks.append(
+                    "Se analizará la pertinencia y procedencia de las Obras Extraordinarias identificadas, verificando, para cada caso, "
+                    "los antecedentes técnicos, contractuales y de ejecución que permitan determinar si los trabajos y/o suministros "
+                    "reclamados corresponden a prestaciones adicionales respecto del alcance originalmente contratado. Asimismo, se establecerán "
+                    "sus características, alcance y condiciones de ejecución, sobre la base de los antecedentes disponibles.\n"
+                )
+            
             if "productividad" in txt_comb or "paraliza" in txt_comb or "improduct" in txt_comb:
-                act_blocks.append("  • Pérdida de productividad: Evaluación de la afectación por paralizaciones o restricciones de trabajo.")
+                act_blocks.append("Pérdida de productividad:")
+                act_blocks.append(
+                    "Se analizarán los antecedentes relativos a eventuales pérdidas de productividad derivadas de paralizaciones o restricciones "
+                    "de personal/equipos durante la ejecución de la obra. Se verificará si durante dichos periodos se exigió mantener "
+                    "la totalidad de la dotación profesional o si existió sobredimensionamiento de equipos por causas no imputables, "
+                    "evaluando los trabajos efectivamente desarrollados y las restricciones impuestas por el Mandante / IFO.\n"
+                )
+                
             if "garant" in txt_comb or "anticipo" in txt_comb:
-                act_blocks.append("  • Garantías y anticipo: Análisis de antecedentes financieros, pólizas y eventuales atrasos en devoluciones.")
+                act_blocks.append("Garantías y Anticipo:")
+                act_blocks.append(
+                    "Se revisarán y analizarán los antecedentes contractuales, financieros y documentales asociados a las garantías y anticipos, "
+                    "con el objeto de determinar las diferencias de costos efectivamente incurridos por el otorgamiento de boletas o pólizas "
+                    "de seguro. Asimismo, se analizarán los antecedentes relativos a las garantías asociadas a las distintas Etapas, a fin de determinar "
+                    "eventuales retrasos en su devolución o atrasos en el pago del anticipo.\n"
+                )
+
             if "multa" in txt_comb or "reajuste" in txt_comb:
-                act_blocks.append("  • Aplicabilidad de multas y reajustes: Análisis de cumplimiento de condiciones contractuales y polinomios aplicables.")
+                act_blocks.append("Aplicabilidad de Multas y Reajustes:")
+                act_blocks.append(
+                    "Se revisarán los antecedentes contractuales y documentales asociados a las recepciones de etapas, incluyendo registros "
+                    "de ejecución, comunicaciones y actos administrativos, para identificar los hechos que dieron origen a las multas y contrastarlos "
+                    "con las condiciones contractuales. En cuanto al reajuste, se analizarán las sumas pagadas con posterioridad al plazo original, "
+                    "determinando la procedencia de la aplicación de fórmulas polinómicas.\n"
+                )
+
             if "proforma" in txt_comb:
-                act_blocks.append("  • Valores proforma: Verificación de montos ejecutados no pagados en estados de pago.")
-            if not any(k in txt_comb for k in ["obra", "productividad", "garant", "multa", "proforma"]):
-                act_blocks.append("  • Conceptos reclamados y puntos de prueba establecidos en el alcance.\n")
-            else:
-                act_blocks.append("")
+                act_blocks.append("Valores proforma:")
+                act_blocks.append(
+                    "Se revisarán los antecedentes contractuales, estados de pago y registros de obra para identificar los valores proforma "
+                    "contemplados y verificar su reconocimiento y pago efectivo al Contratista.\n"
+                )
 
-            # ETAPA B
-            act_blocks.append("Etapa B: Estimación de los Gastos Generales Extraproporcionales")
-            act_blocks.append("Considera la determinación y cuantificación de los gastos generales asociados al período de plazo extraproporcional identificado y validado en la Etapa A. Se analizarán según los criterios contractuales (RCOP / Proporción de oferta).\n")
+            if "recepc" in txt_comb or "observac" in txt_comb:
+                act_blocks.append("Recepción de Obras y Registro de Documentos:")
+                act_blocks.append(
+                    "Para esta etapa se analizarán los registros de obra (comunicaciones, libro de obra, convenios, minutas, programas de obra, "
+                    "estados de pago, actas de recepción e informes mensuales IMO y de prevención de riesgos) para verificar la procedencia "
+                    "de las observaciones de recepción formuladas por el MOP / Mandante.\n"
+                )
 
-            # ETAPA C
-            act_blocks.append("Etapa C: Cuantificación de mayores costos")
-            act_blocks.append("Considera la determinación y cuantificación de los mayores costos efectivamente incurridos como consecuencia de las situaciones validadas en la Etapa A:")
-            act_blocks.append("  • C1. Costos directos asociados a Obras Extraordinarias.")
-            act_blocks.append("  • C2. Costos asociados a pérdida de productividad por paralizaciones o restricciones de personal/equipos.")
-            act_blocks.append("  • C3. Costos financieros asociados a retrasos en pagos, devoluciones de garantías o anticipos.")
-            act_blocks.append("  • C4. Costos asociados al levantamiento de observaciones en recepción de obras.\n")
+            # --- ETAPA B ---
+            act_blocks.append("Etapa B: Estimación de los Gastos Generales Extra proporcionales\n")
+            act_blocks.append(
+                "Esta etapa considera la determinación y cuantificación de los gastos generales asociados al período de plazo "
+                "extra proporcional previamente identificado y validado en la Etapa A. Para estos efectos, se estimarán los gastos "
+                "generales mediante los siguientes criterios:"
+            )
+            act_blocks.append("  • Gastos generales conforme al 12% establecido en el artículo 147 del DS N° 75 (RCOP).")
+            act_blocks.append("  • Gastos generales determinados sobre la base de la proporción de gastos generales contenida en la oferta del Contratista.\n")
 
-            # ETAPA D
-            act_blocks.append("Etapa D: Elaboración del Informe Final")
-            act_blocks.append("A partir de los análisis indicados en las etapas anteriores, se emitirá un informe técnico final junto a sus anexos de respaldo. Sin perjuicio de lo anterior, se podrán entregar avances parciales según la necesidad.")
+            # --- ETAPA C ---
+            act_blocks.append("Etapa C: Cuantificación de mayores costos\n")
+            act_blocks.append(
+                "Esta etapa considera la determinación y cuantificación de los mayores costos efectivamente incurridos por el Contratista "
+                "como consecuencia de las situaciones reclamadas y validadas en las etapas anteriores. Para estos efectos, se analizarán y "
+                "cuantificarán los siguientes conceptos:\n"
+            )
+            act_blocks.append("C1. Costos directos asociados a las Obras Extraordinarias identificadas.")
+            act_blocks.append("C2. Costos asociados a la pérdida de productividad derivada de paralizaciones o restricciones de recursos.")
+            act_blocks.append("C3. Costos financieros asociados a retrasos en los pagos, anticipos, devoluciones de garantías o valores proforma.")
+            act_blocks.append("C4. Costos asociados al levantamiento de observaciones de recepción que resulten procedentes.\n")
+            act_blocks.append(
+                f"Para la determinación de los mayores costos, será responsabilidad de {client_ref} proporcionar oportunamente los antecedentes "
+                "de respaldo correspondientes, tales como facturas, boletas, órdenes de compra, comprobantes de pago y registros contables "
+                "que permitan vincular los costos incurridos con el concepto reclamado.\n"
+            )
+
+            # --- ETAPA D ---
+            act_blocks.append("Etapa D: Elaboración del Informe Final\n")
+            act_blocks.append(
+                "A partir de los análisis indicados en las etapas anteriores, se emitirá un informe final junto a sus anexos de respaldos. "
+                "Sin perjuicio de lo anterior, se podrán entregar avances parciales según la necesidad del Cliente."
+            )
 
             st.session_state.auto_actividades = "\n".join(act_blocks)
-            st.success("¡Actividades y Etapas generadas exitosamente!")
+            st.success("¡Actividades redactadas con el estándar pericial completo de IDIEM!")
 
     st.markdown("---")
+    # Carga el texto extenso en el área de texto editable
     actividades = st.text_area(
         "6. Actividades / Etapas Propuestas (Output Generado):", 
         value=st.session_state.auto_actividades, 
-        placeholder="Aquí se desplegarán automáticamente las Actividades estructuradas por Etapas...", 
-        height=260
+        placeholder="Aquí se desplegará el texto completo formateado por etapas...", 
+        height=320
     )
 
 # ---------------------------------------------------------
