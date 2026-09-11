@@ -94,7 +94,6 @@ with tab2:
                     if not api_key:
                         st.error("Error: No se encontró 'GEMINI_API_KEY' en los Secrets de Streamlit Cloud.")
                     else:
-                        # Nueva SDK oficial de Google GenAI
                         client = genai.Client(api_key=api_key)
                         
                         prompt_conceptos = f"""
