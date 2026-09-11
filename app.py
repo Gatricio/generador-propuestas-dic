@@ -109,7 +109,7 @@ with tab2:
                         (Propón el desglose ordenado por etapas para la Sección 6 'Actividades', agrupando los conceptos en Etapa A: Análisis de Pertinencia y Línea Base, Etapa B: Evaluación de Plazo o Costos según corresponda, y Etapa C/D: Elaboración de Informe Técnico Final).
                         """
                         
-                        model = genai.GenerativeModel('gemini-2.5-flash')
+                        model = genai.GenerativeModel('gemini-1.5-flash')
                         response = model.generate_content(prompt_conceptos)
                         texto_res = response.text
                         
