@@ -1,4 +1,4 @@
-import datetime
+      import datetime
 from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
@@ -99,7 +99,6 @@ with tab2:
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
 
-    # Inputs escritos/ingresados por el usuario
     intro = st.text_area(
         "4. Introducción / Contexto de la Obra (Input Usuario):", 
         value="", 
@@ -110,55 +109,74 @@ with tab2:
     alcance = st.text_area(
         "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba - Input Usuario):", 
         value="", 
-        placeholder="Escriba o pegue el punteo de los conceptos a evaluar o Puntos de Prueba. Ej:\n- Análisis de mayores gastos generales extraproporcionales\n- Impacto en plazo sobre ruta crítica (TIA)\n- Reajuste polinómico", 
+        placeholder="Escriba o pegue el punteo de los conceptos a evaluar. Ej:\n- Obras extraordinarias y adicionales\n- Pérdida de productividad por paralizaciones\n- Gastos generales extraproporcionales\n- Reajuste y valores proforma", 
         height=140
     )
 
     st.markdown("---")
     st.markdown("### ⚡ Generación Automática de Actividades / Etapas")
-    st.caption("Presione el botón para estructurar automáticamente el desglose de Actividades (Sección 6) con base en la Introducción y el Alcance ingresados.")
+    st.caption("Presione el botón para estructurar automáticamente el desglose de Actividades (Sección 6) en el formato pericial estándar de IDIEM.")
 
     if st.button("⚙️ Generar 6. Actividades / Etapas Propuestas"):
         if not intro.strip() and not alcance.strip():
             st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar las Actividades.")
         else:
-            texto_base = (intro + " " + alcance).lower()
+            txt_comb = (intro + " " + alcance).lower()
             
-            # Generar Etapas Estructuradas automáticamente
-            act_list = [
-                "Etapa A: Recopilación, Auditoría Documental y Línea Base Contractual",
-                "  • Auditoría e inventario sistemático de la documentación técnica y contractual del proyecto.",
-                "  • Revisión de la línea base contractual y verificación de la pertinencia técnica de las reclamaciones."
-            ]
+            act_blocks = []
+            act_blocks.append("Para desarrollar el alcance, se contempla desarrollar las siguientes etapas y actividades:\n")
             
-            # Etapa B: Ajustada dinámicamente según palabras clave detectadas
-            act_list.append("\nEtapa B: Análisis Técnico Especializado y Cuantificación de Impactos")
+            # ETAPA A
+            act_blocks.append("Etapa A: Análisis de pertinencia de las situaciones reclamadas\n")
+            act_blocks.append("A.1 Análisis de antecedentes de la obra contratada")
+            act_blocks.append("Considera la revisión y análisis de los antecedentes contractuales (bases de licitación, especificaciones técnicas, presupuesto de la oferta, aclaraciones y respuestas) para establecer la línea base del contrato en relación a los conceptos reclamados.\n")
             
-            if any(k in texto_base for k in ["plazo", "atraso", "critica", "tia", "cronograma"]):
-                act_list.append("  • Análisis forense de plazo e impacto en la ruta crítica mediante metodología Time Impact Analysis (TIA).")
-            if any(k in texto_base for k in ["gasto", "costo", "sobrecosto", "general", "directo"]):
-                act_list.append("  • Auditoría y cuantificación empírica de mayores costos directos y gastos generales extraproporcionales.")
-            if any(k in texto_base for k in ["reajuste", "polinom", "precio", "indice"]):
-                act_list.append("  • Evaluación de la reajustabilidad de precios y aplicación de fórmulas polinómicas contractuales.")
-            if not any(k in texto_base for k in ["plazo", "gasto", "costo", "reajuste"]):
-                act_list.append("  • Evaluación técnica independiente y fundada de las discrepancias señaladas en el alcance.")
+            act_blocks.append("A.2 Análisis de los convenios modificatorios")
+            act_blocks.append("Se revisarán los convenios modificatorios y antecedentes disponibles para determinar los días correspondientes a aumentos de plazo extraproporcionales y verificar la procedencia técnica de sus circunstancias de origen.\n")
+            
+            act_blocks.append("A.3 Análisis y validación de las situaciones reclamadas")
+            act_blocks.append("Se analizarán los registros documentales de obra para constatar la existencia y afectaciones asociadas a los siguientes conceptos:")
+            
+            if "obra" in txt_comb or "adicional" in txt_comb or "extraordinaria" in txt_comb:
+                act_blocks.append("  • Obras extraordinarias y modificaciones de proyecto: Verificación de pertinencia respecto al alcance original.")
+            if "productividad" in txt_comb or "paraliza" in txt_comb or "improduct" in txt_comb:
+                act_blocks.append("  • Pérdida de productividad: Evaluación de la afectación por paralizaciones o restricciones de trabajo.")
+            if "garant" in txt_comb or "anticipo" in txt_comb:
+                act_blocks.append("  • Garantías y anticipo: Análisis de antecedentes financieros, pólizas y eventuales atrasos en devoluciones.")
+            if "multa" in txt_comb or "reajuste" in txt_comb:
+                act_blocks.append("  • Aplicabilidad de multas y reajustes: Análisis de cumplimiento de condiciones contractuales y polinomios aplicables.")
+            if "proforma" in txt_comb:
+                act_blocks.append("  • Valores proforma: Verificación de montos ejecutados no pagados en estados de pago.")
+            if not any(k in txt_comb for k in ["obra", "productividad", "garant", "multa", "proforma"]):
+                act_blocks.append("  • Conceptos reclamados y puntos de prueba establecidos en el alcance.\n")
+            else:
+                act_blocks.append("")
 
-            act_list.extend([
-                "\nEtapa C: Elaboración y Emisión de Entregables",
-                "  • Elaboración y revisión del Informe Técnico Borrador.",
-                "  • Emisión del Informe Técnico Final firmado para entrega al Cliente / Tribunal."
-            ])
-            
-            st.session_state.auto_actividades = "\n".join(act_list)
+            # ETAPA B
+            act_blocks.append("Etapa B: Estimación de los Gastos Generales Extraproporcionales")
+            act_blocks.append("Considera la determinación y cuantificación de los gastos generales asociados al período de plazo extraproporcional identificado y validado en la Etapa A. Se analizarán según los criterios contractuales (RCOP / Proporción de oferta).\n")
+
+            # ETAPA C
+            act_blocks.append("Etapa C: Cuantificación de mayores costos")
+            act_blocks.append("Considera la determinación y cuantificación de los mayores costos efectivamente incurridos como consecuencia de las situaciones validadas en la Etapa A:")
+            act_blocks.append("  • C1. Costos directos asociados a Obras Extraordinarias.")
+            act_blocks.append("  • C2. Costos asociados a pérdida de productividad por paralizaciones o restricciones de personal/equipos.")
+            act_blocks.append("  • C3. Costos financieros asociados a retrasos en pagos, devoluciones de garantías o anticipos.")
+            act_blocks.append("  • C4. Costos asociados al levantamiento de observaciones en recepción de obras.\n")
+
+            # ETAPA D
+            act_blocks.append("Etapa D: Elaboración del Informe Final")
+            act_blocks.append("A partir de los análisis indicados en las etapas anteriores, se emitirá un informe técnico final junto a sus anexos de respaldo. Sin perjuicio de lo anterior, se podrán entregar avances parciales según la necesidad.")
+
+            st.session_state.auto_actividades = "\n".join(act_blocks)
             st.success("¡Actividades y Etapas generadas exitosamente!")
 
     st.markdown("---")
-    # Output generado automáticamente (editable por el usuario)
     actividades = st.text_area(
         "6. Actividades / Etapas Propuestas (Output Generado):", 
         value=st.session_state.auto_actividades, 
         placeholder="Aquí se desplegarán automáticamente las Actividades estructuradas por Etapas...", 
-        height=180
+        height=260
     )
 
 # ---------------------------------------------------------
