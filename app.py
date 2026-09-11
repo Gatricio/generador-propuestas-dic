@@ -3,7 +3,7 @@ import datetime
 from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
-import google.generativeai as genai
+from google import genai
 
 # Configuración inicial de Streamlit
 st.set_page_config(
@@ -83,7 +83,6 @@ with tab2:
         else:
             with st.spinner("Redactando propuesta técnica en lenguaje de ingeniería contractual..."):
                 try:
-                    # Búsqueda de la API Key
                     api_key = None
                     if "GEMINI_API_KEY" in st.secrets:
                         api_key = st.secrets["GEMINI_API_KEY"]
@@ -93,9 +92,10 @@ with tab2:
                         api_key = os.environ.get("GEMINI_API_KEY", "")
 
                     if not api_key:
-                        st.error("Error: No se encontró 'GEMINI_API_KEY' en la pestaña Secrets de Streamlit Cloud.")
+                        st.error("Error: No se encontró 'GEMINI_API_KEY' en los Secrets de Streamlit Cloud.")
                     else:
-                        genai.configure(api_key=api_key)
+                        # Nueva SDK oficial de Google GenAI
+                        client = genai.Client(api_key=api_key)
                         
                         prompt_conceptos = f"""
                         Actúa como un Perito e Ingeniero experto de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
@@ -117,24 +117,12 @@ with tab2:
                         (Propón el desglose ordenado por etapas para la Sección 6 'Actividades', agrupando los conceptos en Etapa A: Análisis de Pertinencia y Línea Base, Etapa B: Evaluación de Plazo o Costos según corresponda, y Etapa C/D: Elaboración de Informe Técnico Final).
                         """
                         
-                        # Lista de nombres exactos soportados por la API
-                        modelos_probar = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-pro']
-                        response = None
-                        last_err = ""
+                        response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=prompt_conceptos
+                        )
                         
-                        for mod_name in modelos_probar:
-                            try:
-                                model = genai.GenerativeModel(mod_name)
-                                response = model.generate_content(prompt_conceptos)
-                                if response and hasattr(response, 'text') and response.text:
-                                    break
-                            except Exception as err_item:
-                                last_err = str(err_item)
-                                continue
-
-                        if response is None or not hasattr(response, 'text') or not response.text:
-                            st.error(f"No se pudo conectar con el servicio. Detalle: {last_err}")
-                        else:
+                        if response and response.text:
                             texto_res = response.text
                             if "SECCION_ACTIVIDADES:" in texto_res:
                                 partes = texto_res.split("SECCION_ACTIVIDADES:")
@@ -145,8 +133,10 @@ with tab2:
                                 st.session_state.auto_actividades = ""
                                 
                             st.success("¡Introducción y Actividades generadas correctamente!")
+                        else:
+                            st.error("No se pudo obtener respuesta del modelo.")
                 except Exception as e:
-                    st.error(f"Error durante el procesamiento con IA: {e}")
+                    st.error(f"Error durante la generación con la SDK de GenAI: {e}")
 
     st.markdown("---")
     intro = st.text_area("4. Introducción / Contexto de la Obra:", value=st.session_state.auto_intro, placeholder="Ingrese o genere la introducción del caso...", height=130)
