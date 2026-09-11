@@ -48,7 +48,7 @@ if not st.session_state.authenticated:
     st.stop()
 
 # ---------------------------------------------------------
-# APLICACIÓN PRINCIPAL (ACCESO PERMITIDO)
+# APLICACIÓN PRINCIPAL
 # ---------------------------------------------------------
 col_title, col_logout = st.columns([5, 1])
 with col_title:
@@ -63,7 +63,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "1. Identificación y Tipo", 
     "2. Alcance y Contexto", 
     "3. Horas Hombre y Perfiles",
-    "4. Oferta Económica y Descarga"
+    "4. Oferta Económica, Exclusiones y Descarga"
 ])
 
 # ---------------------------------------------------------
@@ -75,23 +75,23 @@ with tab1:
     
     col1, col2 = st.columns(2)
     with col1:
-        codigo = st.text_input("Código de Propuesta:", value="", placeholder="Ej: PR.DIC.2026-001")
-        cliente = st.text_input("Cliente / Razón Social:", value="", placeholder="Ej: Nombre Empresa o Cliente")
-        solicitante = st.text_input("Nombre Solicitante:", value="", placeholder="Ej: Nombre del contacto / Abogado")
-        cargo_solicitante = st.text_input("Cargo Solicitante:", value="", placeholder="Ej: Gerente / Juez Árbitro")
+        codigo = st.text_input("Código de Propuesta:", value="", placeholder="Ej: PR.DIC.2026-040")
+        cliente = st.text_input("Cliente / Razón Social:", value="", placeholder="Ej: Consorcio Icafal - L&D SpA")
+        solicitante = st.text_input("Nombre Solicitante:", value="", placeholder="Ej: Alfredo Vial R.")
+        cargo_solicitante = st.text_input("Cargo Solicitante:", value="", placeholder="Ej: Abogado representante")
     with col2:
         revision = st.text_input("Revisión N°:", value="0")
-        rut_cliente = st.text_input("RUT Cliente:", value="", placeholder="Ej: 76.xxx.xxx-x")
-        email_solicitante = st.text_input("Email Solicitante:", value="", placeholder="correo@ejemplo.cl")
+        rut_cliente = st.text_input("RUT Cliente:", value="", placeholder="Ej: 77.433.027-5")
+        email_solicitante = st.text_input("Email Solicitante:", value="", placeholder="avial@amlv.cl")
         rol_cam = st.text_input("Tribunal / Rol Arbitral (Solo CAM):", value="", placeholder="Ej: Rol CAM N° 5043-2022")
     
-    nombre_proyecto = st.text_input("Nombre del Proyecto / Referencia:", value="", placeholder="Ej: Construcción Obra / Proyecto")
+    nombre_proyecto = st.text_input("Nombre del Proyecto / Referencia:", value="", placeholder="Ej: NORMALIZACIÓN HOSPITAL DR. LEOPOLDO ORTEGA DE CHILE CHICO")
     
-    default_prop_title = "PERITAJE TÉCNICO ARBITRAL" if "CAM" in tipo_encargo else "INFORME TÉCNICO DE PERTINENCIA E IMPACTO EN PLAZO Y COSTOS"
+    default_prop_title = "PERITAJE TÉCNICO ARBITRAL" if "CAM" in tipo_encargo else "INFORME TÉCNICO DE CUANTIFICACIÓN DE MAYORES COSTOS"
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value=default_prop_title)
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO (Exhaustivo según estándar MOP/IDIEM)
+# PESTAÑA 2: ALCANCE Y CONTEXTO
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
@@ -102,24 +102,23 @@ with tab2:
     intro = st.text_area(
         "4. Introducción / Contexto de la Obra (Input Usuario):", 
         value="", 
-        placeholder="Ingrese la introducción del caso, contexto del proyecto y controversia...", 
-        height=130
+        placeholder="Ingrese la introducción del caso, antecedentes del contrato, montos, plazos y convenios modificatorios...", 
+        height=140
     )
     
     alcance = st.text_area(
         "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba - Input Usuario):", 
         value="", 
-        placeholder="Escriba o pegue los conceptos a evaluar. Ej:\n- Obras extraordinarias y modificaciones de proyecto\n- Pérdida de productividad por paralización o falta de equipos\n- Garantías, anticipo y retrasos en devolución\n- Aplicabilidad de multas, reajuste polinómico y valores proforma\n- Levantamiento de observaciones en recepción de obra", 
+        placeholder="Ingrese los puntos del alcance a evaluar...", 
         height=140
     )
 
     st.markdown("---")
-    st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial Completo)")
-    st.caption("Presione el botón para generar automáticamente la redacción exhaustiva de Actividades (Sección 6) por etapas A, B, C y D.")
+    st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial IDIEM)")
 
     if st.button("⚙️ Generar 6. Actividades Extensas"):
         if not intro.strip() and not alcance.strip():
-            st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar las Actividades.")
+            st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar.")
         else:
             txt_comb = (intro + " " + alcance).lower()
             client_ref = cliente if cliente else "el Cliente / Consorcio"
@@ -127,9 +126,7 @@ with tab2:
             act_blocks = []
             act_blocks.append("Para desarrollar el alcance, se contempla desarrollar las siguientes etapas y actividades:\n")
             
-            # --- ETAPA A ---
             act_blocks.append("Etapa A: Análisis de pertinencia de las situaciones reclamadas\n")
-            
             act_blocks.append("A.1 Análisis de antecedentes de la obra contratada")
             act_blocks.append(
                 "Considera la revisión y análisis de los antecedentes contractuales, tales como las Bases de licitación, "
@@ -143,125 +140,52 @@ with tab2:
                 "En esta etapa se revisarán los convenios modificatorios y demás antecedentes contractuales disponibles, "
                 "con el propósito de identificar y determinar los días correspondientes a aumentos de plazo extra proporcionales. "
                 "Para cada uno de estos aumentos, IDIEM analizará los antecedentes técnicos, contractuales y de ejecución de las obras "
-                "que permitan identificar las circunstancias que efectivamente dieron origen a su otorgamiento, evaluando su correspondencia "
-                "con las condiciones y hechos verificados durante el desarrollo del contrato. Asimismo, se evaluará la procedencia "
-                "y justificación técnica de cada aumento de plazo, considerando su relación con las actividades afectadas, las condiciones "
-                f"de ejecución y los antecedentes que sustenten su reconocimiento. Será responsabilidad de {client_ref} proporcionar "
-                "oportunamente la información y documentación necesaria para realizar dicho análisis y sustentar las circunstancias que habrían "
-                "dado origen a cada uno de los aumentos de plazo extra proporcionales.\n"
+                "que permitan identificar las circunstancias que efectivamente dieron origen a su otorgamiento.\n"
             )
             
             act_blocks.append("A.3 Análisis y validación de las situaciones reclamadas")
             act_blocks.append(
                 "Se considerará la revisión y análisis de los registros documentales de la obra, con el propósito de constatar la existencia "
-                "de las situaciones reclamadas respecto de la línea base establecida en A.1, así como determinar sus eventuales "
-                f"afectaciones directas e indirectas. De acuerdo con las situaciones indicadas por {client_ref}, se desarrollarán "
-                "los siguientes análisis específicos:\n"
+                "de las situaciones reclamadas respecto de la línea base establecida en A.1. De acuerdo con las situaciones indicadas "
+                f"por {client_ref}, se desarrollarán los análisis específicos de obras extraordinarias, pérdidas de productividad, "
+                "garantías, anticipos, multas, reajustes y valores proforma según corresponda.\n"
             )
-            
-            if "obra" in txt_comb or "adicional" in txt_comb or "extraordinaria" in txt_comb:
-                act_blocks.append("Obras extraordinarias:")
-                act_blocks.append(
-                    "Se analizará la pertinencia y procedencia de las Obras Extraordinarias identificadas, verificando, para cada caso, "
-                    "los antecedentes técnicos, contractuales y de ejecución que permitan determinar si los trabajos y/o suministros "
-                    "reclamados corresponden a prestaciones adicionales respecto del alcance originalmente contratado. Asimismo, se establecerán "
-                    "sus características, alcance y condiciones de ejecución, sobre la base de los antecedentes disponibles.\n"
-                )
-            
-            if "productividad" in txt_comb or "paraliza" in txt_comb or "improduct" in txt_comb:
-                act_blocks.append("Pérdida de productividad:")
-                act_blocks.append(
-                    "Se analizarán los antecedentes relativos a eventuales pérdidas de productividad derivadas de paralizaciones o restricciones "
-                    "de personal/equipos durante la ejecución de la obra. Se verificará si durante dichos periodos se exigió mantener "
-                    "la totalidad de la dotación profesional o si existió sobredimensionamiento de equipos por causas no imputables, "
-                    "evaluando los trabajos efectivamente desarrollados y las restricciones impuestas por el Mandante / IFO.\n"
-                )
-                
-            if "garant" in txt_comb or "anticipo" in txt_comb:
-                act_blocks.append("Garantías y Anticipo:")
-                act_blocks.append(
-                    "Se revisarán y analizarán los antecedentes contractuales, financieros y documentales asociados a las garantías y anticipos, "
-                    "con el objeto de determinar las diferencias de costos efectivamente incurridos por el otorgamiento de boletas o pólizas "
-                    "de seguro. Asimismo, se analizarán los antecedentes relativos a las garantías asociadas a las distintas Etapas, a fin de determinar "
-                    "eventuales retrasos en su devolución o atrasos en el pago del anticipo.\n"
-                )
 
-            if "multa" in txt_comb or "reajuste" in txt_comb:
-                act_blocks.append("Aplicabilidad de Multas y Reajustes:")
-                act_blocks.append(
-                    "Se revisarán los antecedentes contractuales y documentales asociados a las recepciones de etapas, incluyendo registros "
-                    "de ejecución, comunicaciones y actos administrativos, para identificar los hechos que dieron origen a las multas y contrastarlos "
-                    "con las condiciones contractuales. En cuanto al reajuste, se analizarán las sumas pagadas con posterioridad al plazo original, "
-                    "determinando la procedencia de la aplicación de fórmulas polinómicas.\n"
-                )
-
-            if "proforma" in txt_comb:
-                act_blocks.append("Valores proforma:")
-                act_blocks.append(
-                    "Se revisarán los antecedentes contractuales, estados de pago y registros de obra para identificar los valores proforma "
-                    "contemplados y verificar su reconocimiento y pago efectivo al Contratista.\n"
-                )
-
-            if "recepc" in txt_comb or "observac" in txt_comb:
-                act_blocks.append("Recepción de Obras y Registro de Documentos:")
-                act_blocks.append(
-                    "Para esta etapa se analizarán los registros de obra (comunicaciones, libro de obra, convenios, minutas, programas de obra, "
-                    "estados de pago, actas de recepción e informes mensuales IMO y de prevención de riesgos) para verificar la procedencia "
-                    "de las observaciones de recepción formuladas por el MOP / Mandante.\n"
-                )
-
-            # --- ETAPA B ---
             act_blocks.append("Etapa B: Estimación de los Gastos Generales Extra proporcionales\n")
             act_blocks.append(
                 "Esta etapa considera la determinación y cuantificación de los gastos generales asociados al período de plazo "
-                "extra proporcional previamente identificado y validado en la Etapa A. Para estos efectos, se estimarán los gastos "
-                "generales mediante los siguientes criterios:"
+                "extra proporcional previamente identificado y validado en la Etapa A. Se estimarán los gastos generales mediante "
+                "el 12% establecido en el artículo 147 del DS N° 75 (RCOP) o sobre la base de la oferta del Contratista.\n"
             )
-            act_blocks.append("  • Gastos generales conforme al 12% establecido en el artículo 147 del DS N° 75 (RCOP).")
-            act_blocks.append("  • Gastos generales determinados sobre la base de la proporción de gastos generales contenida en la oferta del Contratista.\n")
 
-            # --- ETAPA C ---
             act_blocks.append("Etapa C: Cuantificación de mayores costos\n")
             act_blocks.append(
                 "Esta etapa considera la determinación y cuantificación de los mayores costos efectivamente incurridos por el Contratista "
-                "como consecuencia de las situaciones reclamadas y validadas en las etapas anteriores. Para estos efectos, se analizarán y "
-                "cuantificarán los siguientes conceptos:\n"
-            )
-            act_blocks.append("C1. Costos directos asociados a las Obras Extraordinarias identificadas.")
-            act_blocks.append("C2. Costos asociados a la pérdida de productividad derivada de paralizaciones o restricciones de recursos.")
-            act_blocks.append("C3. Costos financieros asociados a retrasos en los pagos, anticipos, devoluciones de garantías o valores proforma.")
-            act_blocks.append("C4. Costos asociados al levantamiento de observaciones de recepción que resulten procedentes.\n")
-            act_blocks.append(
-                f"Para la determinación de los mayores costos, será responsabilidad de {client_ref} proporcionar oportunamente los antecedentes "
-                "de respaldo correspondientes, tales como facturas, boletas, órdenes de compra, comprobantes de pago y registros contables "
-                "que permitan vincular los costos incurridos con el concepto reclamado.\n"
+                "como consecuencia de las situaciones reclamadas y validadas en las etapas anteriores (costos directos, pérdida de productividad, "
+                "costos financieros y levantamiento de observaciones).\n"
             )
 
-            # --- ETAPA D ---
             act_blocks.append("Etapa D: Elaboración del Informe Final\n")
             act_blocks.append(
-                "A partir de los análisis indicados en las etapas anteriores, se emitirá un informe final junto a sus anexos de respaldos. "
-                "Sin perjuicio de lo anterior, se podrán entregar avances parciales según la necesidad del Cliente."
+                "A partir de los análisis indicados en las etapas anteriores, se emitirá un informe final junto a sus anexos de respaldos."
             )
 
             st.session_state.auto_actividades = "\n".join(act_blocks)
-            st.success("¡Actividades redactadas con el estándar pericial completo de IDIEM!")
+            st.success("¡Actividades redactadas exitosamente!")
 
     st.markdown("---")
-    # Carga el texto extenso en el área de texto editable
     actividades = st.text_area(
         "6. Actividades / Etapas Propuestas (Output Generado):", 
         value=st.session_state.auto_actividades, 
-        placeholder="Aquí se desplegará el texto completo formateado por etapas...", 
-        height=320
+        height=280
     )
 
 # ---------------------------------------------------------
-# PESTAÑA 3: HORAS HOMBRE Y PERFILES (5 Profesionales)
+# PESTAÑA 3: HORAS HOMBRE Y PERFILES (Organograma Dinámico)
 # ---------------------------------------------------------
 with tab3:
-    st.subheader("Estimación de Recursos (5 Profesionales de Asesoría) y Tarifas Editables")
-    meses_val = st.number_input("Plazo Total del Estudio (Meses):", min_value=0.5, step=0.5, value=1.0)
+    st.subheader("Estimación de Recursos y Perfiles Profesionales")
+    meses_val = st.number_input("Plazo Total del Estudio (Meses):", min_value=0.5, step=0.5, value=3.0)
     
     col_hdr1, col_hdr2, col_hdr3 = st.columns([2, 1, 1])
     with col_hdr1: st.markdown("**Categoría Profesional**")
@@ -270,22 +194,22 @@ with tab3:
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Asesor Técnico / Revisor")
-    with c2: hh_asesor = st.number_input("HH Asesor", min_value=0, value=0, label_visibility="collapsed")
+    with c2: hh_asesor = st.number_input("HH Asesor", min_value=0, value=10, label_visibility="collapsed")
     with c3: tar_asesor = st.number_input("Tarifa Asesor", min_value=0.0, value=2.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Jefe de Proyecto / Asesoría")
-    with c2: hh_jefe = st.number_input("HH Jefe", min_value=0, value=0, label_visibility="collapsed")
+    with c2: hh_jefe = st.number_input("HH Jefe", min_value=0, value=60, label_visibility="collapsed")
     with c3: tar_jefe = st.number_input("Tarifa Jefe", min_value=0.0, value=1.5, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 1")
-    with c2: hh_an1 = st.number_input("HH Profesional 1", min_value=0, value=0, label_visibility="collapsed")
+    with c2: hh_an1 = st.number_input("HH Profesional 1", min_value=0, value=180, label_visibility="collapsed")
     with c3: tar_an1 = st.number_input("Tarifa Prof. 1", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 2")
-    with c2: hh_an2 = st.number_input("HH Profesional 2", min_value=0, value=0, label_visibility="collapsed")
+    with c2: hh_an2 = st.number_input("HH Profesional 2", min_value=0, value=180, label_visibility="collapsed")
     with c3: tar_an2 = st.number_input("Tarifa Prof. 2", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
@@ -303,6 +227,9 @@ with tab3:
     with c2: hh_an5 = st.number_input("HH Profesional 5", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_an5 = st.number_input("Tarifa Prof. 5", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
+    # Conteo dinámico de profesionales activos
+    num_profesionales_activos = sum([1 for hh in [hh_an1, hh_an2, hh_an3, hh_an4, hh_an5] if hh > 0])
+
     tot_hh = (hh_asesor + hh_jefe + hh_an1 + hh_an2 + hh_an3 + hh_an4 + hh_an5) * meses_val
     tot_uf = (
         hh_asesor * tar_asesor + 
@@ -315,35 +242,45 @@ with tab3:
     ) * meses_val
     
     st.markdown("---")
-    st.info(f"**Total Horas Hombre:** {tot_hh:.0f} HH  |  **Monto Total Calculado:** {tot_uf:.1f} UF")
+    st.info(f"**Total Horas Hombre:** {tot_hh:.0f} HH  |  **Monto Total Calculado:** UF {tot_uf:.1f}.-")
 
 # ---------------------------------------------------------
-# PESTAÑA 4: OFERTA ECONÓMICA Y DESCARGA (5 Hitos Título + %)
+# PESTAÑA 4: OFERTA ECONÓMICA, EXCLUSIONES Y DESCARGA
 # ---------------------------------------------------------
 with tab4:
-    st.subheader("Condiciones Comerciales y Estructura de Pagos (5 Hitos Personalizables)")
+    st.subheader("Condiciones Comerciales y Exclusiones")
     
-    st.markdown("#### Configuración de Hitos de Pago (Título y Porcentaje)")
+    # --- SECCIÓN NUEVA DE EXCLUSIONES (11) ---
+    st.markdown("#### 11. Exclusiones del Servicio (4 Espacios Editables)")
+    st.caption("Escriba o modifique las exclusiones específicas para este encargo:")
+    
+    excl1 = st.text_input("Exclusión 1:", value="Visitas a terreno.")
+    excl2 = st.text_input("Exclusión 2:", value="Analizar otras situaciones no indicadas en el alcance de la presente propuesta.")
+    excl3 = st.text_input("Exclusión 3:", value="Cualquier otra situación no indicada en el alcance, será considerada como adicional y se entregará el plazo y costo de incluirla dentro de este.")
+    excl4 = st.text_input("Exclusión 4 (Opcional):", value="")
+
+    st.markdown("---")
+    st.markdown("#### 13. Estructura de Pagos (5 Hitos Personalizables)")
     
     col_t1, col_p1 = st.columns([3, 1])
-    with col_t1: titulo_h1 = st.text_input("Título Hito 1:", value="Anticipo / Orden de Compra")
-    with col_p1: pct_h1 = st.number_input("% Hito 1:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 50)
+    with col_t1: titulo_h1 = st.text_input("Título Hito 1:", value="al momento de aceptar la presente propuesta")
+    with col_p1: pct_h1 = st.number_input("% Hito 1:", min_value=0, max_value=100, value=30)
 
     col_t2, col_p2 = st.columns([3, 1])
-    with col_t2: titulo_h2 = st.text_input("Título Hito 2:", value="Entrega del Informe de Pertinencia")
-    with col_p2: pct_h2 = st.number_input("% Hito 2:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 0)
+    with col_t2: titulo_h2 = st.text_input("Título Hito 2:", value="contra la presentación de avance 1")
+    with col_p2: pct_h2 = st.number_input("% Hito 2:", min_value=0, max_value=100, value=20)
 
     col_t3, col_p3 = st.columns([3, 1])
-    with col_t3: titulo_h3 = st.text_input("Título Hito 3:", value="Entrega del Informe Borrador")
-    with col_p3: pct_h3 = st.number_input("% Hito 3:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 0)
+    with col_t3: titulo_h3 = st.text_input("Título Hito 3:", value="contra la presentación de avance 2")
+    with col_p3: pct_h3 = st.number_input("% Hito 3:", min_value=0, max_value=100, value=20)
 
     col_t4, col_p4 = st.columns([3, 1])
-    with col_t4: titulo_h4 = st.text_input("Título Hito 4:", value="Entrega del Informe Final / Firmado")
-    with col_p4: pct_h4 = st.number_input("% Hito 4:", min_value=0, max_value=100, value=10 if "Parte" in tipo_encargo else 50)
+    with col_t4: titulo_h4 = st.text_input("Título Hito 4:", value="contra entrega de informe borrador")
+    with col_p4: pct_h4 = st.number_input("% Hito 4:", min_value=0, max_value=100, value=20)
 
     col_t5, col_p5 = st.columns([3, 1])
-    with col_t5: titulo_h5 = st.text_input("Título Hito 5 (Opcional):", value="Aprobación Final / Cierre")
-    with col_p5: pct_h5 = st.number_input("% Hito 5:", min_value=0, max_value=100, value=0)
+    with col_t5: titulo_h5 = st.text_input("Título Hito 5:", value="al momento de entregar informe final")
+    with col_p5: pct_h5 = st.number_input("% Hito 5:", min_value=0, max_value=100, value=10)
 
     tot_pct = pct_h1 + pct_h2 + pct_h3 + pct_h4 + pct_h5
     if tot_pct != 100:
@@ -351,15 +288,16 @@ with tab4:
     else:
         st.success("Estructura de pagos válida (Suma 100%).")
 
+    # Lista consolidada de forma de pago
     hitos_list = []
-    if pct_h1 > 0: hitos_list.append(f"{pct_h1}% contra {titulo_h1}")
-    if pct_h2 > 0: hitos_list.append(f"{pct_h2}% contra {titulo_h2}")
-    if pct_h3 > 0: hitos_list.append(f"{pct_h3}% contra {titulo_h3}")
-    if pct_h4 > 0: hitos_list.append(f"{pct_h4}% contra {titulo_h4}")
-    if pct_h5 > 0: hitos_list.append(f"{pct_h5}% contra {titulo_h5}")
-    forma_pago_texto = " / ".join(hitos_list)
+    if pct_h1 > 0: hitos_list.append(f"{pct_h1}% {titulo_h1}.")
+    if pct_h2 > 0: hitos_list.append(f"{pct_h2}% {titulo_h2}.")
+    if pct_h3 > 0: hitos_list.append(f"{pct_h3}% {titulo_h3}.")
+    if pct_h4 > 0: hitos_list.append(f"{pct_h4}% {titulo_h4}.")
+    if pct_h5 > 0: hitos_list.append(f"{pct_h5}% {titulo_h5}.")
+    forma_pago_texto = "\n".join(hitos_list)
 
-    condicion_pago = st.text_input("Condición de Pago (Días):", value="", placeholder="Ej: 30 días desde fecha de emisión de factura")
+    condicion_pago = st.text_input("Condición de Pago (Días):", value="30 días desde fecha de emisión de factura.")
     
     regimen_iva = st.selectbox("Régimen de Impuestos / IVA:", [
         "Exento de IVA (Ley N° 21.094 sobre Universidades Estatales)",
@@ -368,9 +306,17 @@ with tab4:
 
     st.markdown("---")
     
+    # Generador final mapeado a la Plantilla Oficial de 19 Capítulos
     def generar_documento_word():
         doc = DocxTemplate("Plantilla_Maestra_IDIEM_v2.docx")
         
+        # Construcción de la lista de exclusiones para el Word
+        lista_exclusiones = []
+        if excl1.strip(): lista_exclusiones.append(excl1.strip())
+        if excl2.strip(): lista_exclusiones.append(excl2.strip())
+        if excl3.strip(): lista_exclusiones.append(excl3.strip())
+        if excl4.strip(): lista_exclusiones.append(excl4.strip())
+
         contexto = {
             'CODIGO_PROPUESTA': codigo,
             'NUM_REVISION': revision,
@@ -382,20 +328,26 @@ with tab4:
             'EMAIL_SOLICITANTE': email_solicitante,
             'NOMBRE_PROYECTO': nombre_proyecto,
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
-            'FECHA_EMISION': datetime.date.today().strftime("%d/%m/%Y"),
-            'SINTESIS_ALCANCE': alcance[:150] + "..." if alcance else "",
-            'SINTESIS_ITEMS': actividades[:150] + "..." if actividades else "",
-            'PLAZO_TEXTO': f"{meses_val} meses",
-            'MONTO_UF_TOTAL': f"{tot_uf:.1f}",
-            'MONTO_LETRAS_UF': f"{tot_uf:.1f} Unidades de Fomento",
+            'FECHA_EMISION': datetime.date.today().strftime("%d-%m-%Y"),
+            'PLAZO_TEXTO': f"{meses_val:.0f} meses" if meses_val.is_integer() else f"{meses_val} meses",
+            'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
+            'MONTO_UF_TOTAL': f"{tot_uf:,.0f}".replace(",", "."),
             'ESTRUCTURA_FORMA_PAGO': forma_pago_texto,
             'CONDICION_PAGO': condicion_pago,
-            'CONSIDERACIONES_INICIALES': "Entrega completa de antecedentes al inicio del servicio.",
             'TEXTO_INTRODUCCION': intro,
             'TEXTO_ALCANCE_DETALLADO': alcance,
             'TEXTO_ACTIVIDADES_ETAPAS': actividades,
+            'LISTA_EXCLUSIONES': lista_exclusiones,
             'NOTA_IMPUESTOS_IVA': regimen_iva,
-            'PROTOCOLO_COMUNICACION': "Toda comunicación formal se realizará vía correo electrónico con el Jefe de Proyecto." if "Parte" in tipo_encargo else "Toda comunicación entre IDIEM y las partes será a través del Tribunal Arbitral."
+            'HH_ASESOR': hh_asesor, 'TAR_ASESOR': f"{tar_asesor:.1f}", 'TOT_HH_ASESOR': int(hh_asesor * meses_val), 'TOT_UF_ASESOR': int(hh_asesor * tar_asesor * meses_val),
+            'HH_JEFE': hh_jefe, 'TAR_JEFE': f"{tar_jefe:.1f}", 'TOT_HH_JEFE': int(hh_jefe * meses_val), 'TOT_UF_JEFE': int(hh_jefe * tar_jefe * meses_val),
+            'HH_AN1': hh_an1, 'TAR_AN1': f"{tar_an1:.1f}", 'TOT_HH_AN1': int(hh_an1 * meses_val), 'TOT_UF_AN1': int(hh_an1 * tar_an1 * meses_val),
+            'HH_AN2': hh_an2, 'TAR_AN2': f"{tar_an2:.1f}", 'TOT_HH_AN2': int(hh_an2 * meses_val), 'TOT_UF_AN2': int(hh_an2 * tar_an2 * meses_val),
+            'PCT_H1': pct_h1, 'TIT_H1': titulo_h1, 'UF_H1': int(tot_uf * (pct_h1/100)),
+            'PCT_H2': pct_h2, 'TIT_H2': titulo_h2, 'UF_H2': int(tot_uf * (pct_h2/100)),
+            'PCT_H3': pct_h3, 'TIT_H3': titulo_h3, 'UF_H3': int(tot_uf * (pct_h3/100)),
+            'PCT_H4': pct_h4, 'TIT_H4': titulo_h4, 'UF_H4': int(tot_uf * (pct_h4/100)),
+            'PCT_H5': pct_h5, 'TIT_H5': titulo_h5, 'UF_H5': int(tot_uf * (pct_h5/100)),
         }
         
         doc.render(contexto)
@@ -406,9 +358,9 @@ with tab4:
         return buffer
 
     st.download_button(
-        label="📥 Descargar Propuesta Emitida (.docx)",
+        label="📥 Descargar Propuesta Emitida Formato Oficial (.docx)",
         data=generar_documento_word(),
-        file_name=f"Propuesta_IDIEM_{codigo if codigo else 'Borrador'}.docx",
+        file_name=f"Propuesta_IDIEM_{codigo if codigo else 'PR.DIC'}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         use_container_width=True
     )
