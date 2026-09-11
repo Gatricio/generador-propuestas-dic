@@ -91,86 +91,73 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value=default_prop_title)
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO
+# PESTAÑA 2: ALCANCE Y CONTEXTO (Input: 4 y 6 | Output: 5)
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
     
-    if "auto_intro" not in st.session_state:
-        st.session_state.auto_intro = ""
-    if "auto_actividades" not in st.session_state:
-        st.session_state.auto_actividades = ""
+    if "auto_alcance" not in st.session_state:
+        st.session_state.auto_alcance = ""
 
-    alcance = st.text_area(
-        "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba):", 
+    # Inputs escritos por el usuario
+    intro = st.text_area(
+        "4. Introducción / Contexto de la Obra (Input Usuario):", 
         value="", 
-        placeholder="Escriba o pegue el punteo de los conceptos a evaluar. Ej:\n- Análisis de mayores gastos generales extraproporcionales\n- Análisis de impacto en plazo sobre la ruta crítica (TIA)\n- Reajustabilidad de precios y actualización polinómica", 
+        placeholder="Ingrese el contexto del proyecto, las partes involucradas y la controversia técnica...", 
         height=140
+    )
+    
+    actividades = st.text_area(
+        "6. Actividades / Etapas Propuestas (Input Usuario):", 
+        value="", 
+        placeholder="Ingrese el desglose de etapas y actividades propuestas para el servicio...", 
+        height=160
     )
 
     st.markdown("---")
-    st.markdown("### ⚡ Generación Dinámica Estándar")
-    st.caption("Presione el botón para estructurar automáticamente la Introducción y las Actividades según los datos del Alcance ingresados.")
+    st.markdown("### ⚡ Generación Automática del Alcance Detallado")
+    st.caption("Presione el botón para sintetizar automáticamente los puntos clave del Alcance (Sección 5) con base en la Introducción y Actividades ingresadas arriba.")
 
-    if st.button("⚙️ Generar Redacción Técnica Automática"):
-        if not alcance.strip():
-            st.warning("Por favor ingrese los conceptos en '5. Alcance Detallado' antes de generar.")
+    if st.button("⚙️ Generar 5. Alcance Detallado"):
+        if not intro.strip() and not actividades.strip():
+            st.warning("Por favor ingrese texto en la Introducción o en las Actividades antes de generar el Alcance.")
         else:
-            proj_ref = nombre_proyecto if nombre_proyecto else "la obra en referencia"
-            client_ref = cliente if cliente else "el Cliente"
+            # Lógica de extracción/síntesis basada en las Secciones 4 y 6
+            conceptos = []
+            texto_combinado = (intro + " " + actividades).lower()
             
-            # Generar Introducción Dinámica
-            if "CAM" in tipo_encargo:
-                st.session_state.auto_intro = (
-                    f"En el marco del proceso arbitral correspondiente a {rol_cam if rol_cam else 'la causa de la referencia'}, "
-                    f"relativo al contrato de ejecución de la obra '{proj_ref}', el Tribunal Arbitral ha encomendado a IDIEM "
-                    f"la realización de un peritaje técnico imparcial. El presente estudio tiene por objeto analizar de manera empírica "
-                    f"y fundada los puntos de prueba fijados, referidos principalmente a: {alcance.replace('\n', ', ')}."
-                )
-            else:
-                st.session_state.auto_intro = (
-                    f"Mediante solicitud presentada por {client_ref}, se ha encomendado a la División de Ingeniería Contractual de IDIEM "
-                    f"la elaboración de un informe técnico independiente referente al desarrollo del proyecto '{proj_ref}'. "
-                    f"Durante la ejecución de las obras han surgido discrepancias contractuales entre las partes, por lo que el presente estudio "
-                    f"evaluará técnicamente la pertinencia y cuantificación de las materias reclamadas, considerando: {alcance.replace('\n', ', ')}."
-                )
-            
-            # Generar Actividades Dinámicas por Etapas
-            act_list = [
-                "Etapa A: Recopilación, Auditoría Documental y Línea Base Contractual",
-                "  • Auditoría e inventario de la documentación del proyecto (contrato, libro de obras, correspondencia y estados de pago).",
-                "  • Análisis de la línea base contractual y verificación de pertinencia técnica de los eventos.",
-                "\nEtapa B: Análisis Técnico Especializado y Cuantificación de Impactos"
-            ]
-            
-            alcance_lower = alcance.lower()
-            if "plazo" in alcance_lower or "tia" in alcance_lower or "atraso" in alcance_lower:
-                act_list.append("  • Análisis de impacto en plazo sobre la ruta crítica utilizando metodologías forenses (Time Impact Analysis).")
-            if "gasto" in alcance_lower or "costo" in alcance_lower or "sobrecosto" in alcance_lower:
-                act_list.append("  • Auditoría y cuantificación de mayores costos directos y gastos generales extraproporcionales.")
-            if "reajuste" in alcance_lower or "precio" in alcance_lower or "polinom" in alcance_lower:
-                act_list.append("  • Evaluación de la aplicación del mecanismo de reajustabilidad y fórmulas polinómicas.")
-            if not any(k in alcance_lower for k in ["plazo", "gasto", "costo", "reajuste"]):
-                act_list.append("  • Evaluación empírica y fundada de los conceptos técnicos detallados en el alcance.")
+            if "plazo" in texto_combinado or "atraso" in texto_combinado or "critica" in texto_combinado or "tia" in texto_combinado:
+                conceptos.append("• Análisis forense de plazo e impacto en la ruta crítica contractual.")
+            if "gasto" in texto_combinado or "costo" in texto_combinado or "sobrecosto" in texto_combinado or "general" in texto_combinado:
+                conceptos.append("• Auditoría y cuantificación de mayores costos directos y gastos generales extraproporcionales.")
+            if "reajuste" in texto_combinado or "polinom" in texto_combinado or "precio" in texto_combinado:
+                conceptos.append("• Evaluación de la reajustabilidad de precios y aplicación de fórmulas polinómicas.")
+            if "pertinencia" in texto_combinado or "linea base" in texto_combinado or "contrato" in texto_combinado:
+                conceptos.append("• Verificación de pertinencia técnica de las reclamaciones y revisión de la línea base contractual.")
+            if "imparcial" in texto_combinado or "cam" in texto_combinado or "arbitral" in texto_combinado or "peritaje" in texto_combinado:
+                conceptos.append("• Evaluación técnica imparcial de los Puntos de Prueba fijados en el proceso.")
                 
-            act_list.extend([
-                "\nEtapa C: Elaboración y Emisión de Entregables",
-                "  • Redacción del informe técnico borrador para revisión interna / contraparte.",
-                "  • Emisión del Informe Técnico Final en formato digital respaldado."
-            ])
-            
-            st.session_state.auto_actividades = "\n".join(act_list)
-            st.success("¡Textos redactados y estructurados exitosamente!")
+            if not conceptos:
+                conceptos.append("• Evaluación técnica e independiente de los antecedentes contractuales y de terreno aportados por las partes.")
+                conceptos.append("• Cuantificación empírica de las variaciones e impactos alegados en la ejecución de la obra.")
+
+            st.session_state.auto_alcance = "\n".join(conceptos)
+            st.success("¡Alcance Detallado generado exitosamente!")
 
     st.markdown("---")
-    intro = st.text_area("4. Introducción / Contexto de la Obra:", value=st.session_state.auto_intro, placeholder="Ingrese o genere la introducción del caso...", height=130)
-    actividades = st.text_area("6. Actividades / Etapas Propuestas:", value=st.session_state.auto_actividades, placeholder="Ingrese o genere las etapas del estudio...", height=160)
+    # Output generado automáticamente ( editable opcionalmente)
+    alcance = st.text_area(
+        "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba - Output Generado):", 
+        value=st.session_state.auto_alcance, 
+        placeholder="Aquí se desplegará automáticamente el Alcance Detallado sintetizado...", 
+        height=140
+    )
 
 # ---------------------------------------------------------
-# PESTAÑA 3: HORAS HOMBRE Y PERFILES
+# PESTAÑA 3: HORAS HOMBRE Y PERFILES (5 Profesionales)
 # ---------------------------------------------------------
 with tab3:
-    st.subheader("Estimación de Recursos y Tarifas Editables")
+    st.subheader("Estimación de Recursos (5 Profesionales de Asesoría) y Tarifas Editables")
     meses_val = st.number_input("Plazo Total del Estudio (Meses):", min_value=0.5, step=0.5, value=1.0)
     
     col_hdr1, col_hdr2, col_hdr3 = st.columns([2, 1, 1])
@@ -178,57 +165,110 @@ with tab3:
     with col_hdr2: st.markdown("**HH / Mes**")
     with col_hdr3: st.markdown("**Tarifa (UF/HH)**")
 
+    # 1. Asesor Técnico
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Asesor Técnico / Revisor")
     with c2: hh_asesor = st.number_input("HH Asesor", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_asesor = st.number_input("Tarifa Asesor", min_value=0.0, value=2.0, step=0.1, label_visibility="collapsed")
 
+    # 2. Jefe de Proyecto
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Jefe de Proyecto / Asesoría")
     with c2: hh_jefe = st.number_input("HH Jefe", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_jefe = st.number_input("Tarifa Jefe", min_value=0.0, value=1.5, step=0.1, label_visibility="collapsed")
 
+    # 3. Profesional 1
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 1")
-    with c2: hh_an1 = st.number_input("HH Analista 1", min_value=0, value=0, label_visibility="collapsed")
-    with c3: tar_an1 = st.number_input("Tarifa Analista 1", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+    with c2: hh_an1 = st.number_input("HH Profesional 1", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_an1 = st.number_input("Tarifa Prof. 1", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
+    # 4. Profesional 2
     c1, c2, c3 = st.columns([2, 1, 1])
-    with c1: st.write("Profesional de Asesoría 2 (Opcional)")
-    with c2: hh_an2 = st.number_input("HH Analista 2", min_value=0, value=0, label_visibility="collapsed")
-    with c3: tar_an2 = st.number_input("Tarifa Analista 2", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+    with c1: st.write("Profesional de Asesoría 2")
+    with c2: hh_an2 = st.number_input("HH Profesional 2", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_an2 = st.number_input("Tarifa Prof. 2", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
-    tot_hh = (hh_asesor + hh_jefe + hh_an1 + hh_an2) * meses_val
-    tot_uf = (hh_asesor * tar_asesor + hh_jefe * tar_jefe + hh_an1 * tar_an1 + hh_an2 * tar_an2) * meses_val
+    # 5. Profesional 3
+    c1, c2, c3 = st.columns([2, 1, 1])
+    with c1: st.write("Profesional de Asesoría 3")
+    with c2: hh_an3 = st.number_input("HH Profesional 3", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_an3 = st.number_input("Tarifa Prof. 3", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+
+    # 6. Profesional 4
+    c1, c2, c3 = st.columns([2, 1, 1])
+    with c1: st.write("Profesional de Asesoría 4")
+    with c2: hh_an4 = st.number_input("HH Profesional 4", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_an4 = st.number_input("Tarifa Prof. 4", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+
+    # 7. Profesional 5
+    c1, c2, c3 = st.columns([2, 1, 1])
+    with c1: st.write("Profesional de Asesoría 5")
+    with c2: hh_an5 = st.number_input("HH Profesional 5", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_an5 = st.number_input("Tarifa Prof. 5", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+
+    # Totales
+    tot_hh = (hh_asesor + hh_jefe + hh_an1 + hh_an2 + hh_an3 + hh_an4 + hh_an5) * meses_val
+    tot_uf = (
+        hh_asesor * tar_asesor + 
+        hh_jefe * tar_jefe + 
+        hh_an1 * tar_an1 + 
+        hh_an2 * tar_an2 + 
+        hh_an3 * tar_an3 + 
+        hh_an4 * tar_an4 + 
+        hh_an5 * tar_an5
+    ) * meses_val
     
     st.markdown("---")
     st.info(f"**Total Horas Hombre:** {tot_hh:.0f} HH  |  **Monto Total Calculado:** {tot_uf:.1f} UF")
 
 # ---------------------------------------------------------
-# PESTAÑA 4: OFERTA ECONÓMICA Y DESCARGA
+# PESTAÑA 4: OFERTA ECONÓMICA Y DESCARGA (5 Hitos Título + %)
 # ---------------------------------------------------------
 with tab4:
-    st.subheader("Condiciones Comerciales y Estructura de Pagos")
+    st.subheader("Condiciones Comerciales y Estructura de Pagos (5 Hitos Personalizables)")
     
-    st.markdown("#### Estructura de Pagos Personalizada (%)")
-    cp1, cp2, cp3, cp4 = st.columns(4)
-    with cp1: pct_ant = st.number_input("% Anticipo:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 50)
-    with cp2: pct_av = st.number_input("% Avance / Pertinencia:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 0)
-    with cp3: pct_borr = st.number_input("% Informe Borrador:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 0)
-    with cp4: pct_fin = st.number_input("% Informe Final / Firmado:", min_value=0, max_value=100, value=10 if "Parte" in tipo_encargo else 50)
+    st.markdown("#### Configuración de Hitos de Pago (Título y Porcentaje)")
     
-    tot_pct = pct_ant + pct_av + pct_borr + pct_fin
-    if tot_pct != 100:
-        st.warning(f"Los porcentajes ingresados suman {tot_pct}%. Deben completar el 100%.")
-    else:
-        st.success("Estructura de pagos válida (100%).")
+    # Hito 1
+    col_t1, col_p1 = st.columns([3, 1])
+    with col_t1: titulo_h1 = st.text_input("Título Hito 1:", value="Anticipo / Orden de Compra")
+    with col_p1: pct_h1 = st.number_input("% Hito 1:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 50)
 
-    partes_pago = []
-    if pct_ant > 0: partes_pago.append(f"{pct_ant}% al momento de la orden de compra / anticipo")
-    if pct_av > 0: partes_pago.append(f"{pct_av}% contra avance de pertinencia")
-    if pct_borr > 0: partes_pago.append(f"{pct_borr}% contra entrega informe borrador")
-    if pct_fin > 0: partes_pago.append(f"{pct_fin}% al momento de entregar informe final")
-    forma_pago_texto = " / ".join(partes_pago)
+    # Hito 2
+    col_t2, col_p2 = st.columns([3, 1])
+    with col_t2: titulo_h2 = st.text_input("Título Hito 2:", value="Entrega del Informe de Pertinencia")
+    with col_p2: pct_h2 = st.number_input("% Hito 2:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 0)
+
+    # Hito 3
+    col_t3, col_p3 = st.columns([3, 1])
+    with col_t3: titulo_h3 = st.text_input("Título Hito 3:", value="Entrega del Informe Borrador")
+    with col_p3: pct_h3 = st.number_input("% Hito 3:", min_value=0, max_value=100, value=30 if "Parte" in tipo_encargo else 0)
+
+    # Hito 4
+    col_t4, col_p4 = st.columns([3, 1])
+    with col_t4: titulo_h4 = st.text_input("Título Hito 4:", value="Entrega del Informe Final / Firmado")
+    with col_p4: pct_h4 = st.number_input("% Hito 4:", min_value=0, max_value=100, value=10 if "Parte" in tipo_encargo else 50)
+
+    # Hito 5
+    col_t5, col_p5 = st.columns([3, 1])
+    with col_t5: titulo_h5 = st.text_input("Título Hito 5 (Opcional):", value="Aprobación Final / Cierre")
+    with col_p5: pct_h5 = st.number_input("% Hito 5:", min_value=0, max_value=100, value=0)
+
+    tot_pct = pct_h1 + pct_h2 + pct_h3 + pct_h4 + pct_h5
+    if tot_pct != 100:
+        st.warning(f"Atención: Los porcentajes ingresados suman {tot_pct}%. Deben completar exactamente el 100%.")
+    else:
+        st.success("Estructura de pagos válida (Suma 100%).")
+
+    # Construcción dinámica del texto para la plantilla
+    hitos_list = []
+    if pct_h1 > 0: hitos_list.append(f"{pct_h1}% contra {titulo_h1}")
+    if pct_h2 > 0: hitos_list.append(f"{pct_h2}% contra {titulo_h2}")
+    if pct_h3 > 0: hitos_list.append(f"{pct_h3}% contra {titulo_h3}")
+    if pct_h4 > 0: hitos_list.append(f"{pct_h4}% contra {titulo_h4}")
+    if pct_h5 > 0: hitos_list.append(f"{pct_h5}% contra {titulo_h5}")
+    forma_pago_texto = " / ".join(hitos_list)
 
     condicion_pago = st.text_input("Condición de Pago (Días):", value="", placeholder="Ej: 30 días desde fecha de emisión de factura")
     
