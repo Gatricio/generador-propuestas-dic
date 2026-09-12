@@ -1,7 +1,12 @@
 import datetime
 from io import BytesIO
 import streamlit as st
-from docxtpl import DocxTemplate
+from docx import Document
+from docx.shared import Pt, Inches, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+from docx.oxml import parse_xml, OxmlElement
+from docx.oxml.ns import nsdecls, qn
 
 # Configuración inicial de Streamlit
 st.set_page_config(
@@ -10,7 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos corporativos IDIEM
+# Estilos corporativos en pantalla
 st.markdown("""
     <style>
     .main-header { font-size:24px; font-weight:bold; color:#002855; margin-bottom:2px; }
@@ -181,7 +186,7 @@ with tab2:
     )
 
 # ---------------------------------------------------------
-# PESTAÑA 3: HORAS HOMBRE Y PERFILES (Organograma Dinámico)
+# PESTAÑA 3: HORAS HOMBRE Y PERFILES
 # ---------------------------------------------------------
 with tab3:
     st.subheader("Estimación de Recursos y Perfiles Profesionales")
@@ -227,7 +232,6 @@ with tab3:
     with c2: hh_an5 = st.number_input("HH Profesional 5", min_value=0, value=0, label_visibility="collapsed")
     with c3: tar_an5 = st.number_input("Tarifa Prof. 5", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
 
-    # Conteo dinámico de profesionales activos
     num_profesionales_activos = sum([1 for hh in [hh_an1, hh_an2, hh_an3, hh_an4, hh_an5] if hh > 0])
 
     tot_hh = (hh_asesor + hh_jefe + hh_an1 + hh_an2 + hh_an3 + hh_an4 + hh_an5) * meses_val
@@ -250,10 +254,7 @@ with tab3:
 with tab4:
     st.subheader("Condiciones Comerciales y Exclusiones")
     
-    # --- SECCIÓN NUEVA DE EXCLUSIONES (11) ---
     st.markdown("#### 11. Exclusiones del Servicio (4 Espacios Editables)")
-    st.caption("Escriba o modifique las exclusiones específicas para este encargo:")
-    
     excl1 = st.text_input("Exclusión 1:", value="Visitas a terreno.")
     excl2 = st.text_input("Exclusión 2:", value="Analizar otras situaciones no indicadas en el alcance de la presente propuesta.")
     excl3 = st.text_input("Exclusión 3:", value="Cualquier otra situación no indicada en el alcance, será considerada como adicional y se entregará el plazo y costo de incluirla dentro de este.")
@@ -263,23 +264,23 @@ with tab4:
     st.markdown("#### 13. Estructura de Pagos (5 Hitos Personalizables)")
     
     col_t1, col_p1 = st.columns([3, 1])
-    with col_t1: titulo_h1 = st.text_input("Título Hito 1:", value="al momento de aceptar la presente propuesta")
+    with col_t1: titulo_h1 = st.text_input("Título Hito 1:", value="al momento de aceptar la presente propuesta.")
     with col_p1: pct_h1 = st.number_input("% Hito 1:", min_value=0, max_value=100, value=30)
 
     col_t2, col_p2 = st.columns([3, 1])
-    with col_t2: titulo_h2 = st.text_input("Título Hito 2:", value="contra la presentación de avance 1")
+    with col_t2: titulo_h2 = st.text_input("Título Hito 2:", value="contra la presentación de avance 1.")
     with col_p2: pct_h2 = st.number_input("% Hito 2:", min_value=0, max_value=100, value=20)
 
     col_t3, col_p3 = st.columns([3, 1])
-    with col_t3: titulo_h3 = st.text_input("Título Hito 3:", value="contra la presentación de avance 2")
+    with col_t3: titulo_h3 = st.text_input("Título Hito 3:", value="contra la presentación de avance 2.")
     with col_p3: pct_h3 = st.number_input("% Hito 3:", min_value=0, max_value=100, value=20)
 
     col_t4, col_p4 = st.columns([3, 1])
-    with col_t4: titulo_h4 = st.text_input("Título Hito 4:", value="contra entrega de informe borrador")
+    with col_t4: titulo_h4 = st.text_input("Título Hito 4:", value="contra entrega de informe borrador.")
     with col_p4: pct_h4 = st.number_input("% Hito 4:", min_value=0, max_value=100, value=20)
 
     col_t5, col_p5 = st.columns([3, 1])
-    with col_t5: titulo_h5 = st.text_input("Título Hito 5:", value="al momento de entregar informe final")
+    with col_t5: titulo_h5 = st.text_input("Título Hito 5:", value="al momento de entregar informe final.")
     with col_p5: pct_h5 = st.number_input("% Hito 5:", min_value=0, max_value=100, value=10)
 
     tot_pct = pct_h1 + pct_h2 + pct_h3 + pct_h4 + pct_h5
@@ -287,15 +288,6 @@ with tab4:
         st.warning(f"Atención: Los porcentajes ingresados suman {tot_pct}%. Deben completar exactamente el 100%.")
     else:
         st.success("Estructura de pagos válida (Suma 100%).")
-
-    # Lista consolidada de forma de pago
-    hitos_list = []
-    if pct_h1 > 0: hitos_list.append(f"{pct_h1}% {titulo_h1}.")
-    if pct_h2 > 0: hitos_list.append(f"{pct_h2}% {titulo_h2}.")
-    if pct_h3 > 0: hitos_list.append(f"{pct_h3}% {titulo_h3}.")
-    if pct_h4 > 0: hitos_list.append(f"{pct_h4}% {titulo_h4}.")
-    if pct_h5 > 0: hitos_list.append(f"{pct_h5}% {titulo_h5}.")
-    forma_pago_texto = "\n".join(hitos_list)
 
     condicion_pago = st.text_input("Condición de Pago (Días):", value="30 días desde fecha de emisión de factura.")
     
@@ -306,52 +298,236 @@ with tab4:
 
     st.markdown("---")
     
-    # Generador final mapeado a la Plantilla Oficial de 19 Capítulos
-    def generar_documento_word():
-        doc = DocxTemplate("Plantilla_Maestra_IDIEM_v2.docx")
-        
-        # Construcción de la lista de exclusiones para el Word
-        lista_exclusiones = []
-        if excl1.strip(): lista_exclusiones.append(excl1.strip())
-        if excl2.strip(): lista_exclusiones.append(excl2.strip())
-        if excl3.strip(): lista_exclusiones.append(excl3.strip())
-        if excl4.strip(): lista_exclusiones.append(excl4.strip())
+    # ---------------------------------------------------------
+    # CONSTRUCTOR NATIVO PYTHON-DOCX (GENERACIÓN DE WORD IMPECABLE)
+    # ---------------------------------------------------------
+    def set_cell_background(cell, fill_hex):
+        tcPr = cell._element.get_or_add_tcPr()
+        shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{fill_hex}"/>')
+        tcPr.append(shd)
 
-        contexto = {
-            'CODIGO_PROPUESTA': codigo,
-            'NUM_REVISION': revision,
-            'NOMBRE_PROPUESTA': nombre_propuesta,
-            'NOMBRE_CLIENTE': cliente,
-            'RUT_CLIENTE': rut_cliente,
-            'NOMBRE_SOLICITANTE': solicitante,
-            'CARGO_SOLICITANTE': cargo_solicitante,
-            'EMAIL_SOLICITANTE': email_solicitante,
-            'NOMBRE_PROYECTO': nombre_proyecto,
-            'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
-            'FECHA_EMISION': datetime.date.today().strftime("%d-%m-%Y"),
-            'PLAZO_TEXTO': f"{meses_val:.0f} meses" if meses_val.is_integer() else f"{meses_val} meses",
-            'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
-            'MONTO_UF_TOTAL': f"{tot_uf:,.0f}".replace(",", "."),
-            'ESTRUCTURA_FORMA_PAGO': forma_pago_texto,
-            'CONDICION_PAGO': condicion_pago,
-            'TEXTO_INTRODUCCION': intro,
-            'TEXTO_ALCANCE_DETALLADO': alcance,
-            'TEXTO_ACTIVIDADES_ETAPAS': actividades,
-            'LISTA_EXCLUSIONES': lista_exclusiones,
-            'NOTA_IMPUESTOS_IVA': regimen_iva,
-            'HH_ASESOR': hh_asesor, 'TAR_ASESOR': f"{tar_asesor:.1f}", 'TOT_HH_ASESOR': int(hh_asesor * meses_val), 'TOT_UF_ASESOR': int(hh_asesor * tar_asesor * meses_val),
-            'HH_JEFE': hh_jefe, 'TAR_JEFE': f"{tar_jefe:.1f}", 'TOT_HH_JEFE': int(hh_jefe * meses_val), 'TOT_UF_JEFE': int(hh_jefe * tar_jefe * meses_val),
-            'HH_AN1': hh_an1, 'TAR_AN1': f"{tar_an1:.1f}", 'TOT_HH_AN1': int(hh_an1 * meses_val), 'TOT_UF_AN1': int(hh_an1 * tar_an1 * meses_val),
-            'HH_AN2': hh_an2, 'TAR_AN2': f"{tar_an2:.1f}", 'TOT_HH_AN2': int(hh_an2 * meses_val), 'TOT_UF_AN2': int(hh_an2 * tar_an2 * meses_val),
-            'PCT_H1': pct_h1, 'TIT_H1': titulo_h1, 'UF_H1': int(tot_uf * (pct_h1/100)),
-            'PCT_H2': pct_h2, 'TIT_H2': titulo_h2, 'UF_H2': int(tot_uf * (pct_h2/100)),
-            'PCT_H3': pct_h3, 'TIT_H3': titulo_h3, 'UF_H3': int(tot_uf * (pct_h3/100)),
-            'PCT_H4': pct_h4, 'TIT_H4': titulo_h4, 'UF_H4': int(tot_uf * (pct_h4/100)),
-            'PCT_H5': pct_h5, 'TIT_H5': titulo_h5, 'UF_H5': int(tot_uf * (pct_h5/100)),
-        }
+    def set_cell_margins(cell, top=100, bottom=100, left=150, right=150):
+        tcPr = cell._element.get_or_add_tcPr()
+        tcMar = parse_xml(f'<w:tcMar {nsdecls("w")}><w:top w:w="{top}" w:type="dxa"/><w:bottom w:w="{bottom}" w:type="dxa"/><w:left w:w="{left}" w:type="dxa"/><w:right w:w="{right}" w:type="dxa"/></w:tcMar>')
+        tcPr.append(tcMar)
+
+    def generar_documento_word_nativo():
+        doc = Document()
+
+        # Estilos generales del documento
+        normal_style = doc.styles['Normal']
+        normal_style.font.name = 'Calibri'
+        normal_style.font.size = Pt(11)
+        normal_style.font.color.rgb = RGBColor(51, 51, 51)
+
+        # 1. RESUMEN
+        h1 = doc.add_heading('1   RESUMEN', level=1)
+        p = doc.add_paragraph('A continuación, se presenta un cuadro resumen de la presente propuesta técnica y económica:')
+
+        # Tabla 1: Información del Cliente
+        p_t1 = doc.add_paragraph()
+        r1 = p_t1.add_run('INFORMACIÓN DEL CLIENTE')
+        r1.bold = True
+        r1.font.color.rgb = RGBColor(0, 40, 85)
+
+        t_client = doc.add_table(rows=5, cols=2)
+        t_client.alignment = WD_TABLE_ALIGNMENT.CENTER
+        client_data = [
+            ("Cliente:", cliente if cliente else "N/A"),
+            ("Rut:", rut_cliente if rut_cliente else "N/A"),
+            ("Solicitante:", solicitante if solicitante else "N/A"),
+            ("Cargo:", cargo_solicitante if cargo_solicitante else "N/A"),
+            ("Correo electrónico:", email_solicitante if email_solicitante else "N/A")
+        ]
+        for idx, (label, val) in enumerate(client_data):
+            row = t_client.rows[idx]
+            row.cells[0].text = label
+            row.cells[1].text = val
+            row.cells[0].paragraphs[0].runs[0].bold = True
+            set_cell_background(row.cells[0], "F0F4F8")
+            set_cell_margins(row.cells[0])
+            set_cell_margins(row.cells[1])
+
+        doc.add_paragraph()
+
+        # Tabla 2: Resumen Propuesta Técnica y Económica
+        p_t2 = doc.add_paragraph()
+        r2 = p_t2.add_run('RESUMEN DE LA PROPUESTA TÉCNICA Y ECONÓMICA')
+        r2.bold = True
+        r2.font.color.rgb = RGBColor(0, 40, 85)
+
+        t_prop = doc.add_table(rows=7, cols=2)
+        t_prop.alignment = WD_TABLE_ALIGNMENT.CENTER
+        prop_data = [
+            ("Nombre de la propuesta:", nombre_propuesta),
+            ("Alcance:", alcance[:200] + "..." if len(alcance) > 200 else alcance),
+            ("Ítems de la propuesta:", "Etapa A: Análisis de pertinencia.\nEtapa B: Estimación Gastos Generales.\nEtapa C: Cuantificación mayores costos.\nEtapa D: Informe final."),
+            ("Plazo total:", f"{meses_val:.0f} meses" if meses_val.is_integer() else f"{meses_val} meses"),
+            ("Oferta económica (valor):", f"UF {tot_uf:,.0f}.-".replace(",", ".")),
+            ("Forma de pago:", f"{pct_h1}% {titulo_h1}\n{pct_h2}% {titulo_h2}\n{pct_h3}% {titulo_h3}\n{pct_h4}% {titulo_h4}\n{pct_h5}% {titulo_h5}"),
+            ("Condición de pago:", condicion_pago)
+        ]
+        for idx, (label, val) in enumerate(prop_data):
+            row = t_prop.rows[idx]
+            row.cells[0].text = label
+            row.cells[1].text = val
+            row.cells[0].paragraphs[0].runs[0].bold = True
+            set_cell_background(row.cells[0], "F0F4F8")
+            set_cell_margins(row.cells[0])
+            set_cell_margins(row.cells[1])
+
+        doc.add_page_break()
+
+        # 2. PRESENTACIÓN DEL CONSULTOR - IDIEM
+        doc.add_heading('2   PRESENTACIÓN DEL CONSULTOR - IDIEM', level=1)
+        doc.add_paragraph("IDIEM es el Centro de Investigación, Desarrollo e Innovación de Estructuras y Materiales, dependiente de la Facultad de Ingeniería de la Universidad de Chile, fundado en 1898.")
+        doc.add_paragraph("Nuestro centro es una institución con reconocida trayectoria y experiencia en la solución de problemas de la construcción. Los servicios que IDIEM ofrece son una respuesta a las necesidades que la industria requiere, aportando al desarrollo de la infraestructura pública y privada del país.")
+
+        # 3. ASESORÍA CONTRACTUAL EN CONTROVERSIAS Y CLAIMS
+        doc.add_heading('3   ASESORÍA CONTRACTUAL EN CONTROVERSIAS Y CLAIMS', level=1)
+        doc.add_paragraph("Elaboramos estudios técnicos durante todo el desarrollo del contrato, desde la etapa de licitación, ejecución de la obra, hasta análisis forenses de contratos en caso de reclamaciones posteriores al término de la obra.")
+
+        # 4. INTRODUCCIÓN
+        doc.add_heading('4   INTRODUCCIÓN', level=1)
+        doc.add_paragraph(intro if intro else "Sin información de introducción ingresada.")
+
+        # 5. ALCANCE
+        doc.add_heading('5   ALCANCE', level=1)
+        doc.add_paragraph(alcance if alcance else "Sin información de alcance ingresada.")
+
+        # 6. ACTIVIDADES
+        doc.add_heading('6   ACTIVIDADES', level=1)
+        doc.add_paragraph(actividades if actividades else "Sin actividades generadas.")
+
+        # 7. ANTECEDENTES
+        doc.add_heading('7   ANTECEDENTES', level=1)
+        doc.add_paragraph("Se requiere contar con la información necesaria para respaldar las situaciones reclamadas, señalados a modo general en los puntos anteriores.")
+
+        # 8. ORGANIGRAMA PROPUESTO
+        doc.add_heading('8   ORGANIGRAMA PROPUESTO', level=1)
+        doc.add_paragraph("Para el presente proyecto se considera el siguiente equipo de profesionales:")
+        doc.add_paragraph("• 1 Profesional Asesor Técnico (Ingeniero Civil o Constructor Civil con más de 15 años de experiencia).")
+        doc.add_paragraph("• 1 Jefe de Proyecto (Ingeniero Civil o Constructor Civil con más de 10 años de experiencia).")
+        doc.add_paragraph(f"• {num_profesionales_activos} Profesionales de Asesoría (Ingeniero Civil o Constructor Civil dedicados al análisis documental y cálculos).")
+
+        # 9. METODOLOGÍA
+        doc.add_heading('9   METODOLOGÍA', level=1)
+        doc.add_paragraph("La metodología contempla: Reunión de inicio, Recopilación de antecedentes, Análisis documental, Solicitud de antecedentes adicionales, Reuniones de coordinación, Análisis pericial y Presentación del Informe Final.")
+
+        # 10. PLAZOS DEL SERVICIO
+        doc.add_heading('10   PLAZOS DEL SERVICIO', level=1)
+        doc.add_paragraph(f"El plazo de ejecución para la entrega del informe preliminar será de {meses_val:.0f} meses, contados a partir de la aceptación de la presente propuesta y de la entrega de antecedentes." if meses_val.is_integer() else f"El plazo de ejecución será de {meses_val} meses.")
+
+        # 11. EXCLUSIONES
+        doc.add_heading('11   EXCLUSIONES', level=1)
+        doc.add_paragraph("No forma parte del alcance del presente estudio:")
+        if excl1.strip(): doc.add_paragraph(f"• {excl1.strip()}")
+        if excl2.strip(): doc.add_paragraph(f"• {excl2.strip()}")
+        if excl3.strip(): doc.add_paragraph(f"• {excl3.strip()}")
+        if excl4.strip(): doc.add_paragraph(f"• {excl4.strip()}")
+
+        # 12. ENTREGABLES
+        doc.add_heading('12   ENTREGABLES', level=1)
+        doc.add_paragraph("Como resultado del estudio se entregará un informe digital conformado por un documento principal y un anexo digital respaldado.")
+
+        # 13. OFERTA ECONÓMICA
+        doc.add_heading('13   OFERTA ECONÓMICA', level=1)
+        doc.add_heading('13.1   Precio del servicio', level=2)
+        doc.add_paragraph(f"El valor del servicio propuesto corresponde a una suma alzada por un valor de UF: {tot_uf:,.0f}.- (Unidades de Fomento), de acuerdo con el siguiente desglose por categoría profesional:".replace(",", "."))
+
+        # Tabla HH 13.1
+        t_hh = doc.add_table(rows=1, cols=6)
+        t_hh.alignment = WD_TABLE_ALIGNMENT.CENTER
+        hdr_cells = t_hh.rows[0].cells
+        hdr_titles = ["Profesional", "Cantidad [HH/mes]", "Duración [Meses]", "Total [HH]", "Precio unitario [UF/HH]", "Total [UF]"]
+        for i, title in enumerate(hdr_titles):
+            hdr_cells[i].text = title
+            hdr_cells[i].paragraphs[0].runs[0].bold = True
+            set_cell_background(hdr_cells[i], "002855")
+            hdr_cells[i].paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+
+        hh_rows_data = [
+            ("Asesor Técnico", hh_asesor, meses_val, int(hh_asesor * meses_val), f"{tar_asesor:.1f}", int(hh_asesor * tar_asesor * meses_val)),
+            ("Jefe Asesoría", hh_jefe, meses_val, int(hh_jefe * meses_val), f"{tar_jefe:.1f}", int(hh_jefe * tar_jefe * meses_val)),
+            ("Profesional de asesoría 1", hh_an1, meses_val, int(hh_an1 * meses_val), f"{tar_an1:.1f}", int(hh_an1 * tar_an1 * meses_val)),
+            ("Profesional de asesoría 2", hh_an2, meses_val, int(hh_an2 * meses_val), f"{tar_an2:.1f}", int(hh_an2 * tar_an2 * meses_val)),
+        ]
+        for p_name, hh_m, m_v, tot_h, tar_u, tot_u in hh_rows_data:
+            if hh_m > 0:
+                row_cells = t_hh.add_row().cells
+                row_cells[0].text = p_name
+                row_cells[1].text = str(hh_m)
+                row_cells[2].text = str(m_v)
+                row_cells[3].text = str(tot_h)
+                row_cells[4].text = str(tar_u)
+                row_cells[5].text = str(tot_u)
+
+        # Fila Total
+        tot_cells = t_hh.add_row().cells
+        tot_cells[0].text = "TOTAL"
+        tot_cells[0].paragraphs[0].runs[0].bold = True
+        tot_cells[3].text = str(int(tot_hh))
+        tot_cells[3].paragraphs[0].runs[0].bold = True
+        tot_cells[5].text = f"{tot_uf:,.0f}".replace(",", ".")
+        tot_cells[5].paragraphs[0].runs[0].bold = True
+
+        doc.add_paragraph()
+        doc.add_paragraph(regimen_iva)
+
+        doc.add_heading('13.2   Términos financieros', level=2)
+        doc.add_paragraph("El servicio se facturará de acuerdo con el siguiente recuadro:")
+
+        # Tabla Hitos 13.2
+        t_hitos = doc.add_table(rows=3, cols=6)
+        t_hitos.alignment = WD_TABLE_ALIGNMENT.CENTER
         
-        doc.render(contexto)
-        
+        # Header Hitos
+        t_hitos.rows[0].cells[0].text = "Total"
+        t_hitos.rows[0].cells[1].text = titulo_h1
+        t_hitos.rows[0].cells[2].text = titulo_h2
+        t_hitos.rows[0].cells[3].text = titulo_h3
+        t_hitos.rows[0].cells[4].text = titulo_h4
+        t_hitos.rows[0].cells[5].text = titulo_h5
+        for cell in t_hitos.rows[0].cells:
+            cell.paragraphs[0].runs[0].bold = True
+            set_cell_background(cell, "002855")
+            cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+
+        # Fila Porcentajes
+        t_hitos.rows[1].cells[0].text = "%"
+        t_hitos.rows[1].cells[1].text = f"{pct_h1}%"
+        t_hitos.rows[1].cells[2].text = f"{pct_h2}%"
+        t_hitos.rows[1].cells[3].text = f"{pct_h3}%"
+        t_hitos.rows[1].cells[4].text = f"{pct_h4}%"
+        t_hitos.rows[1].cells[5].text = f"{pct_h5}%"
+
+        # Fila Montos UF
+        t_hitos.rows[2].cells[0].text = "Monto (UF)"
+        t_hitos.rows[2].cells[1].text = str(int(tot_uf * (pct_h1/100)))
+        t_hitos.rows[2].cells[2].text = str(int(tot_uf * (pct_h2/100)))
+        t_hitos.rows[2].cells[3].text = str(int(tot_uf * (pct_h3/100)))
+        t_hitos.rows[2].cells[4].text = str(int(tot_uf * (pct_h4/100)))
+        t_hitos.rows[2].cells[5].text = str(int(tot_uf * (pct_h5/100)))
+
+        # 14 a 19 Capítulos Estándar
+        doc.add_heading('14   CONSIDERACIONES PARA LA EJECUCIÓN DE LOS TRABAJOS', level=1)
+        doc.add_paragraph("Los trabajos se realizarán en dependencias de IDIEM en días hábiles, en horario institucional.")
+
+        doc.add_heading('15   ENTREGA DE INFORMACIÓN', level=1)
+        doc.add_paragraph("La documentación proporcionada por el Cliente es fundamental. Se solicita entrega digital en carpetas ordenadas.")
+
+        doc.add_heading('16   COMUNICACIÓN ENTRE LAS PARTES', level=1)
+        doc.add_paragraph("Se solicita un único canal de comunicación. Por parte de IDIEM el canal será el Jefe del Proyecto.")
+
+        doc.add_heading('17   TÉRMINO ANTICIPADO', level=1)
+        doc.add_paragraph("Cualquiera de las partes tendrá derecho a pedir la terminación anticipada según la legislación chilena aplicable.")
+
+        doc.add_heading('18   DISPOSICIONES ADMINISTRATIVAS', level=1)
+        doc.add_paragraph("Para transferencias en cuenta corriente Banco de Chile N° 170-006 44-01 a nombre de Universidad de Chile.")
+
+        doc.add_heading('19   DISPOSICIONES GENERALES', level=1)
+        doc.add_paragraph("El precio pactado constituye una suma fija. IDIEM aportará una visión imparcial y técnica en todo momento.")
+
         buffer = BytesIO()
         doc.save(buffer)
         buffer.seek(0)
@@ -359,7 +535,7 @@ with tab4:
 
     st.download_button(
         label="📥 Descargar Propuesta Emitida Formato Oficial (.docx)",
-        data=generar_documento_word(),
+        data=generar_documento_word_nativo(),
         file_name=f"Propuesta_IDIEM_{codigo if codigo else 'PR.DIC'}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         use_container_width=True
