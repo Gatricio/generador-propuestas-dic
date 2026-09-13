@@ -68,7 +68,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ---------------------------------------------------------
-# PESTAÑA 1: IDENTIFICACIÓN Y TIPO (Campo Nombre Propuesta en blanco)
+# PESTAÑA 1: IDENTIFICACIÓN Y TIPO (Con Fecha y sin Nombre de Proyecto)
 # ---------------------------------------------------------
 with tab1:
     st.subheader("Clasificación del Encargo")
@@ -80,6 +80,7 @@ with tab1:
         cliente = st.text_input("Cliente / Razón Social:", value="", placeholder="Ingrese razón social del cliente...")
         solicitante = st.text_input("Nombre Solicitante:", value="", placeholder="Nombre del solicitante...")
         cargo_solicitante = st.text_input("Cargo Solicitante:", value="", placeholder="Cargo del solicitante...")
+        fecha_emision = st.date_input("Fecha de Emisión:", value=datetime.date.today(), format="DD/MM/YYYY")
     with col2:
         revision = st.text_input("Revisión N°:", value="0")
         rut_cliente = st.text_input("RUT Cliente:", value="", placeholder="RUT cliente...")
@@ -87,7 +88,6 @@ with tab1:
         telefono_solicitante = st.text_input("Teléfono Solicitante:", value="", placeholder="+56 9 ...")
         rol_cam = st.text_input("Tribunal / Rol Arbitral (Solo CAM):", value="", placeholder="Rol CAM N°...")
     
-    nombre_proyecto = st.text_input("Nombre del Proyecto / Referencia:", value="", placeholder="Nombre oficial del proyecto...")
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value="", placeholder="Ej: INFORME TÉCNICO DE CUANTIFICACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
@@ -188,7 +188,7 @@ with tab2:
     )
 
 # ---------------------------------------------------------
-# PESTAÑA 3: HORAS HOMBRE Y PERFILES (Valores en 0 por defecto)
+# PESTAÑA 3: HORAS HOMBRE Y PERFILES
 # ---------------------------------------------------------
 with tab3:
     st.subheader("Estimación de Recursos y Perfiles Profesionales")
@@ -327,9 +327,8 @@ with tab4:
             'CARGO_SOLICITANTE': cargo_solicitante,
             'EMAIL_SOLICITANTE': email_solicitante,
             'TELEFONO_SOLICITANTE': telefono_solicitante,
-            'NOMBRE_PROYECTO': nombre_proyecto,
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
-            'FECHA_EMISION': datetime.date.today().strftime("%d-%m-%Y"),
+            'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),  # Fecha formateada seleccionada en Pestaña 1
             'SINTESIS_ALCANCE': resumen_alcance_final,
             'PLAZO_TEXTO': f"{meses_val:.0f} meses" if meses_val.is_integer() else f"{meses_val} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
