@@ -242,7 +242,7 @@ with tab2:
     )
 
 # ---------------------------------------------------------
-# PESTAÑA 3: HORAS HOMBRE Y PERFILES (5 Profesionales)
+# PESTAÑA 3: HORAS HOMBRE Y PERFILES
 # ---------------------------------------------------------
 with tab3:
     st.subheader("Estimación de Recursos y Perfiles Profesionales")
@@ -374,6 +374,24 @@ with tab4:
 
         monto_uf_palabras = numero_a_palabras_uf(tot_uf)
 
+        # Extracción automática de títulos de actividades (Etapas) para Ítems de la propuesta
+        lista_items_propuesta = []
+        if actividades.strip():
+            lines = actividades.split("\n")
+            for line in lines:
+                line_str = line.strip()
+                if line_str.startswith("Etapa ") or line_str.startswith("A.") or line_str.startswith("B.") or line_str.startswith("C.") or line_str.startswith("D."):
+                    lista_items_propuesta.append(line_str)
+        
+        # Resguardo por si el texto ingresado no usa la sintaxis estándar
+        if not lista_items_propuesta:
+            lista_items_propuesta = [
+                "Etapa A: Análisis de pertinencia de las situaciones reclamadas",
+                "Etapa B: Estimación de los Gastos Generales Extra proporcionales",
+                "Etapa C: Cuantificación de mayores costos",
+                "Etapa D: Elaboración del Informe Final"
+            ]
+
         contexto = {
             'CODIGO_PROPUESTA': codigo if codigo else "PR.DIC",
             'NUM_REVISION': revision if revision else "0",
@@ -387,6 +405,7 @@ with tab4:
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
             'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),
             'SINTESIS_ALCANCE': resumen_alcance_final,
+            'LISTA_ITEMS_PROPUESTA': lista_items_propuesta,  # <--- Títulos extraídos para la celda Ítems de la propuesta
             'PLAZO_MESES': str_duracion,
             'PLAZO_TEXTO': f"{str_duracion} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
@@ -399,7 +418,7 @@ with tab4:
             'LISTA_EXCLUSIONES': lista_excl,
             'NOTA_IMPUESTOS_IVA': regimen_iva,
             
-            # Variables de Horas Hombre y UF por fila fija (Asesor, Jefe y 5 Profesionales)
+            # Variables de Horas Hombre
             'HH_ASESOR': hh_asesor, 
             'TAR_ASESOR': f"{tar_asesor:.1f}".replace(".", ","), 
             'TOT_HH_ASESOR': int(hh_asesor * meses_val), 
