@@ -87,6 +87,7 @@ with tab1:
         telefono_solicitante = st.text_input("Teléfono Solicitante:", value="", placeholder="+56 9 ...")
         rol_cam = st.text_input("Tribunal / Rol Arbitral (Solo CAM):", value="", placeholder="Rol CAM N°...")
     
+    nombre_proyecto = st.text_input("Nombre del Proyecto / Referencia:", value="", placeholder="Nombre oficial del proyecto...")
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value="", placeholder="Ej: INFORME TÉCNICO DE CUANTIFICACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
