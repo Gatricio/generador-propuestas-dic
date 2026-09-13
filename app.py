@@ -372,7 +372,6 @@ with tab4:
         # SÍNTESIS DEL ALCANCE (Aproximadamente 20% del Cap. 5)
         # -----------------------------------------------------
         if alcance.strip():
-            # Extrae las primeras frases u oraciones representativas
             oraciones = [s.strip() for s in alcance.replace("\n", ". ").split(".") if s.strip()]
             num_oraciones = max(1, int(len(oraciones) * 0.20))
             resumen_alcance_20 = ". ".join(oraciones[:num_oraciones]) + "."
@@ -380,14 +379,13 @@ with tab4:
             resumen_alcance_20 = "El presente estudio comprende la evaluación técnica y contractual de los conceptos reclamados en el proyecto."
 
         # -----------------------------------------------------
-        # FILTRADO DE ÍTEMS DE LA PROPUESTA (Únicamente Etapas Principales)
+        # FILTRADO DE ÍTEMS DE LA PROPUESTA (Etapas Principales)
         # -----------------------------------------------------
         lista_items_propuesta = []
         if actividades.strip():
             lines = actividades.split("\n")
             for line in lines:
                 line_str = line.strip()
-                # Se filtran únicamente los encabezados de Etapa A, B, C, D (excluyendo sub-puntos A.1, A.2, etc.)
                 if line_str.startswith("Etapa "):
                     lista_items_propuesta.append(line_str)
         
@@ -398,6 +396,21 @@ with tab4:
                 "Etapa C: Cuantificación de mayores costos",
                 "Etapa D: Elaboración del Informe Final"
             ]
+
+        # -----------------------------------------------------
+        # CONSTRUCCIÓN DE LA LISTA DE FORMA DE PAGO PARA EL CAP. 1
+        # -----------------------------------------------------
+        lista_hitos_forma_pago = []
+        raw_hitos = [
+            (pct_h1, titulo_h1),
+            (pct_h2, titulo_h2),
+            (pct_h3, titulo_h3),
+            (pct_h4, titulo_h4),
+            (pct_h5, titulo_h5)
+        ]
+        for pct, tit in raw_hitos:
+            if pct > 0:
+                lista_hitos_forma_pago.append(f"{pct}% {tit}")
 
         contexto = {
             'CODIGO_PROPUESTA': codigo if codigo else "PR.DIC",
@@ -411,8 +424,9 @@ with tab4:
             'TELEFONO_SOLICITANTE': telefono_solicitante,
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
             'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),
-            'SINTESIS_ALCANCE': resumen_alcance_20,  # <--- Inyecta la síntesis del ~20% del Cap. 5
-            'LISTA_ITEMS_PROPUESTA': lista_items_propuesta,  # <--- Únicamente Etapas Principales
+            'SINTESIS_ALCANCE': resumen_alcance_20,
+            'LISTA_ITEMS_PROPUESTA': lista_items_propuesta,
+            'LISTA_HITOS_FORMA_PAGO': lista_hitos_forma_pago,  # <--- Inyección para la celda Forma de pago
             'PLAZO_MESES': str_duracion,
             'PLAZO_TEXTO': f"{str_duracion} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
