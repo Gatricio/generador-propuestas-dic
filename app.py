@@ -145,20 +145,15 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value="", placeholder="Ej: INFORME TÉCNICO DE CUANTIFICACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO
+# PESTAÑA 2: ALCANCE Y CONTEXTO (Síntesis Automática por Etapas)
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
     
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
-
-    sintesis_alcance = st.text_area(
-        "Resumen / Síntesis del Alcance (Para Cuadro Resumen Cap. 1):",
-        value="",
-        placeholder="Ingrese una síntesis breve del objetivo y alcance del estudio para la tabla del Resumen Ejecutivo...",
-        height=90
-    )
+    if "auto_sintesis_alcance" not in st.session_state:
+        st.session_state.auto_sintesis_alcance = ""
 
     intro = st.text_area(
         "4. Introducción / Contexto de la Obra (Input Usuario):", 
@@ -181,7 +176,6 @@ with tab2:
         if not intro.strip() and not alcance.strip():
             st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar.")
         else:
-            txt_comb = (intro + " " + alcance).lower()
             client_ref = cliente if cliente else "el Cliente / Consorcio"
             
             act_blocks = []
@@ -232,13 +226,31 @@ with tab2:
             )
 
             st.session_state.auto_actividades = "\n".join(act_blocks)
-            st.success("¡Actividades redactadas exitosamente!")
+            
+            # Generación automática de la Síntesis (solo títulos de Etapas A, B, C, D)
+            etapas_titulos = [
+                "Etapa A: Análisis de pertinencia de las situaciones reclamadas",
+                "Etapa B: Estimación de los Gastos Generales Extra proporcionales",
+                "Etapa C: Cuantificación de mayores costos",
+                "Etapa D: Elaboración del Informe Final"
+            ]
+            st.session_state.auto_sintesis_alcance = "\n".join(etapas_titulos)
+            
+            st.success("¡Actividades y Síntesis por Etapas generadas automáticamente!")
 
     st.markdown("---")
     actividades = st.text_area(
         "6. Actividades / Etapas Propuestas (Output Generado):", 
         value=st.session_state.auto_actividades, 
         height=280
+    )
+
+    sintesis_alcance_disp = st.text_area(
+        "Resumen / Síntesis del Alcance (Automático para Cuadro Resumen Cap. 1):",
+        value=st.session_state.auto_sintesis_alcance,
+        height=110,
+        disabled=True,
+        help="Este cuadro se genera de forma automática extrayendo únicamente los títulos de las Etapas del Capítulo 6."
     )
 
 # ---------------------------------------------------------
@@ -361,6 +373,10 @@ with tab4:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         template_path = os.path.join(base_dir, "Plantilla_Oficial_IDIEM.docx")
         
+        if not os.path.exists(template_path):
+            st.error(f"❌ No se encontró la plantilla en la ruta: {template_path}. Por favor sube 'Plantilla_Oficial_IDIEM.docx' a GitHub.")
+            st.stop()
+
         doc = DocxTemplate(template_path)
         
         lista_excl = []
@@ -369,12 +385,10 @@ with tab4:
         if excl3.strip(): lista_excl.append(excl3.strip())
         if excl4.strip(): lista_excl.append(excl4.strip())
 
-        resumen_alcance_final = sintesis_alcance.strip() if sintesis_alcance.strip() else (alcance[:250] + "..." if len(alcance) > 250 else alcance)
         str_duracion = f"{meses_val:.0f}" if meses_val.is_integer() else f"{meses_val}"
-
         monto_uf_palabras = numero_a_palabras_uf(tot_uf)
 
-        # Extracción automática de títulos de actividades (Etapas) para Ítems de la propuesta
+        # Extracción de títulos de Etapas
         lista_items_propuesta = []
         if actividades.strip():
             lines = actividades.split("\n")
@@ -383,7 +397,6 @@ with tab4:
                 if line_str.startswith("Etapa ") or line_str.startswith("A.") or line_str.startswith("B.") or line_str.startswith("C.") or line_str.startswith("D."):
                     lista_items_propuesta.append(line_str)
         
-        # Resguardo por si el texto ingresado no usa la sintaxis estándar
         if not lista_items_propuesta:
             lista_items_propuesta = [
                 "Etapa A: Análisis de pertinencia de las situaciones reclamadas",
@@ -391,6 +404,8 @@ with tab4:
                 "Etapa C: Cuantificación de mayores costos",
                 "Etapa D: Elaboración del Informe Final"
             ]
+
+        resumen_alcance_final = "\n".join(lista_items_propuesta)
 
         contexto = {
             'CODIGO_PROPUESTA': codigo if codigo else "PR.DIC",
@@ -405,7 +420,7 @@ with tab4:
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
             'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),
             'SINTESIS_ALCANCE': resumen_alcance_final,
-            'LISTA_ITEMS_PROPUESTA': lista_items_propuesta,  # <--- Títulos extraídos para la celda Ítems de la propuesta
+            'LISTA_ITEMS_PROPUESTA': lista_items_propuesta,
             'PLAZO_MESES': str_duracion,
             'PLAZO_TEXTO': f"{str_duracion} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
@@ -456,7 +471,7 @@ with tab4:
 
             'TOT_HH_GENERAL': int(tot_hh),
             
-            # Datos de Hitos para Tabla 13.2
+            # Datos de Hitos
             'PCT_H1': pct_h1, 'TIT_H1': titulo_h1, 'UF_H1': f"{int(tot_uf * (pct_h1/100)):,.0f}".replace(",", "."),
             'PCT_H2': pct_h2, 'TIT_H2': titulo_h2, 'UF_H2': f"{int(tot_uf * (pct_h2/100)):,.0f}".replace(",", "."),
             'PCT_H3': pct_h3, 'TIT_H3': titulo_h3, 'UF_H3': f"{int(tot_uf * (pct_h3/100)):,.0f}".replace(",", "."),
