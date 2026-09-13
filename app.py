@@ -1,3 +1,4 @@
+import os
 import datetime
 from io import BytesIO
 import streamlit as st
@@ -10,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos corporativos en pantalla
+# Estilos corporativos IDIEM
 st.markdown("""
     <style>
     .main-header { font-size:24px; font-weight:bold; color:#002855; margin-bottom:2px; }
@@ -67,7 +68,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ---------------------------------------------------------
-# PESTAÑA 1: IDENTIFICACIÓN Y TIPO
+# PESTAÑA 1: IDENTIFICACIÓN Y TIPO (Ajuste 1 y 4: Campos limpios + Teléfono)
 # ---------------------------------------------------------
 with tab1:
     st.subheader("Clasificación del Encargo")
@@ -75,23 +76,24 @@ with tab1:
     
     col1, col2 = st.columns(2)
     with col1:
-        codigo = st.text_input("Código de Propuesta:", value="", placeholder="Ej: PR.DIC.2026-040")
-        cliente = st.text_input("Cliente / Razón Social:", value="", placeholder="Ej: Consorcio Icafal - L&D SpA")
-        solicitante = st.text_input("Nombre Solicitante:", value="", placeholder="Ej: Alfredo Vial R.")
-        cargo_solicitante = st.text_input("Cargo Solicitante:", value="", placeholder="Ej: Abogado representante")
+        codigo = st.text_input("Código de Propuesta:", value="", placeholder="Ingrese código PR.DIC...")
+        cliente = st.text_input("Cliente / Razón Social:", value="", placeholder="Ingrese razón social del cliente...")
+        solicitante = st.text_input("Nombre Solicitante:", value="", placeholder="Nombre del solicitante...")
+        cargo_solicitante = st.text_input("Cargo Solicitante:", value="", placeholder="Cargo del solicitante...")
     with col2:
         revision = st.text_input("Revisión N°:", value="0")
-        rut_cliente = st.text_input("RUT Cliente:", value="", placeholder="Ej: 77.433.027-5")
-        email_solicitante = st.text_input("Email Solicitante:", value="", placeholder="avial@amlv.cl")
-        rol_cam = st.text_input("Tribunal / Rol Arbitral (Solo CAM):", value="", placeholder="Ej: Rol CAM N° 5043-2022")
+        rut_cliente = st.text_input("RUT Cliente:", value="", placeholder="RUT cliente...")
+        email_solicitante = st.text_input("Email Solicitante:", value="", placeholder="correo@ejemplo.cl")
+        telefono_solicitante = st.text_input("Teléfono Solicitante:", value="", placeholder="+56 9 ...")
+        rol_cam = st.text_input("Tribunal / Rol Arbitral (Solo CAM):", value="", placeholder="Rol CAM N°...")
     
-    nombre_proyecto = st.text_input("Nombre del Proyecto / Referencia:", value="", placeholder="Ej: NORMALIZACIÓN HOSPITAL DR. LEOPOLDO ORTEGA DE CHILE CHICO")
+    nombre_proyecto = st.text_input("Nombre del Proyecto / Referencia:", value="", placeholder="Nombre oficial del proyecto...")
     
     default_prop_title = "PERITAJE TÉCNICO ARBITRAL" if "CAM" in tipo_encargo else "INFORME TÉCNICO DE CUANTIFICACIÓN DE MAYORES COSTOS"
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value=default_prop_title)
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO
+# PESTAÑA 2: ALCANCE Y CONTEXTO (Ajuste 5: Resumen del Alcance para Tabla Cap 1)
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
@@ -99,17 +101,24 @@ with tab2:
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
 
+    sintesis_alcance = st.text_area(
+        "Resumen / Síntesis del Alcance (Para Cuadro Resumen Cap. 1):",
+        value="",
+        placeholder="Ingrese una síntesis breve del objetivo y alcance del estudio para la tabla del Resumen Ejecutivo...",
+        height=90
+    )
+
     intro = st.text_area(
         "4. Introducción / Contexto de la Obra (Input Usuario):", 
         value="", 
-        placeholder="Ingrese el contexto del proyecto...", 
+        placeholder="Ingrese el contexto detallado de la obra, contrato y controversia...", 
         height=140
     )
     
     alcance = st.text_area(
         "5. Alcance Detallado (Conceptos a evaluar / Puntos de Prueba - Input Usuario):", 
         value="", 
-        placeholder="Ingrese los puntos del alcance a evaluar...", 
+        placeholder="Ingrese el desglose detallado de los puntos de prueba y alcance...", 
         height=140
     )
 
@@ -294,31 +303,37 @@ with tab4:
     st.markdown("---")
 
     # ---------------------------------------------------------
-    # INYECCIÓN SOBRE TU PLANTILLA WORD OFICIAL (MANTENIENDO TU DISEÑO AL 100%)
+    # GENERACIÓN CON PLANTILLA OFICIAL
     # ---------------------------------------------------------
     def generar_documento_word():
-        # Usa tu plantilla maestra con tu diseño exacto a mano
-        doc = DocxTemplate("Plantilla_Oficial_IDIEM.docx")
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        template_path = os.path.join(base_dir, "Plantilla_Oficial_IDIEM.docx")
         
-        # Formateo de exclusiones como lista limpia
+        doc = DocxTemplate(template_path)
+        
         lista_excl = []
         if excl1.strip(): lista_excl.append(excl1.strip())
         if excl2.strip(): lista_excl.append(excl2.strip())
         if excl3.strip(): lista_excl.append(excl3.strip())
         if excl4.strip(): lista_excl.append(excl4.strip())
 
+        # Si el usuario no ingresó síntesis, se usa el inicio del alcance
+        resumen_alcance_final = sintesis_alcance.strip() if sintesis_alcance.strip() else (alcance[:250] + "..." if len(alcance) > 250 else alcance)
+
         contexto = {
-            'CODIGO_PROPUESTA': codigo,
-            'NUM_REVISION': revision,
+            'CODIGO_PROPUESTA': codigo if codigo else "PR.DIC",
+            'NUM_REVISION': revision if revision else "0",
             'NOMBRE_PROPUESTA': nombre_propuesta,
             'NOMBRE_CLIENTE': cliente,
             'RUT_CLIENTE': rut_cliente,
             'NOMBRE_SOLICITANTE': solicitante,
             'CARGO_SOLICITANTE': cargo_solicitante,
             'EMAIL_SOLICITANTE': email_solicitante,
+            'TELEFONO_SOLICITANTE': telefono_solicitante,  # Ajuste 4: Teléfono
             'NOMBRE_PROYECTO': nombre_proyecto,
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
-            'FECHA_EMISION': datetime.date.today().strftime("%d-%m-%Y"),
+            'FECHA_EMISION': datetime.date.today().strftime("%d-%m-%Y"),  # Ajuste 3: Fecha dinámica
+            'SINTESIS_ALCANCE': resumen_alcance_final,  # Ajuste 5: Resumen Alcance
             'PLAZO_TEXTO': f"{meses_val:.0f} meses" if meses_val.is_integer() else f"{meses_val} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
             'MONTO_UF_TOTAL': f"{tot_uf:,.0f}".replace(",", "."),
@@ -329,14 +344,14 @@ with tab4:
             'LISTA_EXCLUSIONES': lista_excl,
             'NOTA_IMPUESTOS_IVA': regimen_iva,
             
-            # Datos dinámicos para la tabla de Horas Hombre respetando tu diseño
+            # Datos de Horas Hombre
             'HH_ASESOR': hh_asesor, 'TAR_ASESOR': f"{tar_asesor:.1f}", 'TOT_HH_ASESOR': int(hh_asesor * meses_val), 'TOT_UF_ASESOR': int(hh_asesor * tar_asesor * meses_val),
             'HH_JEFE': hh_jefe, 'TAR_JEFE': f"{tar_jefe:.1f}", 'TOT_HH_JEFE': int(hh_jefe * meses_val), 'TOT_UF_JEFE': int(hh_jefe * tar_jefe * meses_val),
             'HH_AN1': hh_an1, 'TAR_AN1': f"{tar_an1:.1f}", 'TOT_HH_AN1': int(hh_an1 * meses_val), 'TOT_UF_AN1': int(hh_an1 * tar_an1 * meses_val),
             'HH_AN2': hh_an2, 'TAR_AN2': f"{tar_an2:.1f}", 'TOT_HH_AN2': int(hh_an2 * meses_val), 'TOT_UF_AN2': int(hh_an2 * tar_an2 * meses_val),
             'TOT_HH_GENERAL': int(tot_hh),
             
-            # Datos dinámicos para la tabla de Hitos respetando tu diseño
+            # Datos de Hitos
             'PCT_H1': pct_h1, 'TIT_H1': titulo_h1, 'UF_H1': int(tot_uf * (pct_h1/100)),
             'PCT_H2': pct_h2, 'TIT_H2': titulo_h2, 'UF_H2': int(tot_uf * (pct_h2/100)),
             'PCT_H3': pct_h3, 'TIT_H3': titulo_h3, 'UF_H3': int(tot_uf * (pct_h3/100)),
