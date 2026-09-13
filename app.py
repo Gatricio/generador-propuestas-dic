@@ -21,6 +21,59 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
+# FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
+# ---------------------------------------------------------
+def numero_a_palabras_uf(n):
+    n = int(round(n))
+    if n == 0:
+        return "cero"
+
+    unidades = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"]
+    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"]
+    decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"]
+    centenas = ["", "ciento", "doscientas", "trescientas", "cuatrocientas", "quinientas", "seiscientas", "setecientas", "ochocientas", "novecientas"]
+
+    def convert_group(n):
+        if n == 0:
+            return ""
+        elif n < 10:
+            return unidades[n]
+        elif n < 20:
+            return especiales[n - 10]
+        elif n < 30:
+            if n == 20:
+                return "veinte"
+            return "veinti" + unidades[n - 20]
+        elif n < 100:
+            u = n % 10
+            d = n // 10
+            return decenas[d] + (" y " + unidades[u] if u > 0 else "")
+        elif n < 1000:
+            if n == 100:
+                return "cien"
+            c = n // 100
+            rest = n % 100
+            return centenas[c] + (" " + convert_group(rest) if rest > 0 else "")
+        return ""
+
+    if n < 1000:
+        res = convert_group(n)
+    elif n < 1000000:
+        miles = n // 1000
+        rest = n % 1000
+        str_miles = "mil" if miles == 1 else convert_group(miles) + " mil"
+        str_rest = convert_group(rest)
+        res = str_miles + (" " + str_rest if str_rest else "")
+    else:
+        millones = n // 1000000
+        rest = n % 1000000
+        str_mill = "un millón" if millones == 1 else convert_group(millones) + " millones"
+        str_rest = numero_a_palabras_uf(rest) if rest > 0 else ""
+        res = str_mill + (" " + str_rest if str_rest else "")
+
+    return res.strip()
+
+# ---------------------------------------------------------
 # SISTEMA DE AUTENTICACIÓN / LOGIN
 # ---------------------------------------------------------
 if "authenticated" not in st.session_state:
@@ -309,7 +362,6 @@ with tab4:
         
         doc = DocxTemplate(template_path)
         
-        # Filtro de lista limpia para iteración Jinja2 por viñetas
         lista_excl = []
         if excl1.strip(): lista_excl.append(excl1.strip())
         if excl2.strip(): lista_excl.append(excl2.strip())
@@ -317,6 +369,35 @@ with tab4:
         if excl4.strip(): lista_excl.append(excl4.strip())
 
         resumen_alcance_final = sintesis_alcance.strip() if sintesis_alcance.strip() else (alcance[:250] + "..." if len(alcance) > 250 else alcance)
+        str_duracion = f"{meses_val:.0f}" if meses_val.is_integer() else f"{meses_val}"
+
+        # Conversión del monto total UF a palabras
+        monto_uf_palabras = numero_a_palabras_uf(tot_uf)
+
+        # Construcción dinámica de profesionales
+        lista_profesionales = []
+        raw_prof_data = [
+            ("Asesor Técnico", hh_asesor, tar_asesor),
+            ("Jefe Asesoría", hh_jefe, tar_jefe),
+            ("Profesional de asesoría 1", hh_an1, tar_an1),
+            ("Profesional de asesoría 2", hh_an2, tar_an2),
+            ("Profesional de asesoría 3", hh_an3, tar_an3),
+            ("Profesional de asesoría 4", hh_an4, tar_an4),
+            ("Profesional de asesoría 5", hh_an5, tar_an5),
+        ]
+
+        for nombre_prof, hh_mes, tarifa in raw_prof_data:
+            if hh_mes > 0:
+                tot_h = int(hh_mes * meses_val)
+                tot_u = int(hh_mes * tarifa * meses_val)
+                lista_profesionales.append({
+                    'nombre': nombre_prof,
+                    'hh_mes': hh_mes,
+                    'duracion': str_duracion,
+                    'tot_hh': tot_h,
+                    'tarifa': f"{tarifa:.1f}".replace(".", ","),
+                    'tot_uf': f"{tot_u:,.0f}".replace(",", ".")
+                })
 
         contexto = {
             'CODIGO_PROPUESTA': codigo if codigo else "PR.DIC",
@@ -331,29 +412,27 @@ with tab4:
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
             'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),
             'SINTESIS_ALCANCE': resumen_alcance_final,
-            'PLAZO_TEXTO': f"{meses_val:.0f} meses" if meses_val.is_integer() else f"{meses_val} meses",
+            'PLAZO_MESES': str_duracion,
+            'PLAZO_TEXTO': f"{str_duracion} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
             'MONTO_UF_TOTAL': f"{tot_uf:,.0f}".replace(",", "."),
+            'MONTO_UF_PALABRAS': monto_uf_palabras,  # <--- Expresión dinámica en palabras
             'CONDICION_PAGO': condicion_pago,
             'TEXTO_INTRODUCCION': intro,
             'TEXTO_ALCANCE_DETALLADO': alcance,
             'TEXTO_ACTIVIDADES_ETAPAS': actividades,
-            'LISTA_EXCLUSIONES': lista_excl,  # Se pasa la lista para la iteración {% for item in LISTA_EXCLUSIONES %}
+            'LISTA_EXCLUSIONES': lista_excl,
             'NOTA_IMPUESTOS_IVA': regimen_iva,
             
-            # Datos de Horas Hombre
-            'HH_ASESOR': hh_asesor, 'TAR_ASESOR': f"{tar_asesor:.1f}", 'TOT_HH_ASESOR': int(hh_asesor * meses_val), 'TOT_UF_ASESOR': int(hh_asesor * tar_asesor * meses_val),
-            'HH_JEFE': hh_jefe, 'TAR_JEFE': f"{tar_jefe:.1f}", 'TOT_HH_JEFE': int(hh_jefe * meses_val), 'TOT_UF_JEFE': int(hh_jefe * tar_jefe * meses_val),
-            'HH_AN1': hh_an1, 'TAR_AN1': f"{tar_an1:.1f}", 'TOT_HH_AN1': int(hh_an1 * meses_val), 'TOT_UF_AN1': int(hh_an1 * tar_an1 * meses_val),
-            'HH_AN2': hh_an2, 'TAR_AN2': f"{tar_an2:.1f}", 'TOT_HH_AN2': int(hh_an2 * meses_val), 'TOT_UF_AN2': int(hh_an2 * tar_an2 * meses_val),
+            'LISTA_PROFESIONALES': lista_profesionales,
             'TOT_HH_GENERAL': int(tot_hh),
             
             # Datos de Hitos
-            'PCT_H1': pct_h1, 'TIT_H1': titulo_h1, 'UF_H1': int(tot_uf * (pct_h1/100)),
-            'PCT_H2': pct_h2, 'TIT_H2': titulo_h2, 'UF_H2': int(tot_uf * (pct_h2/100)),
-            'PCT_H3': pct_h3, 'TIT_H3': titulo_h3, 'UF_H3': int(tot_uf * (pct_h3/100)),
-            'PCT_H4': pct_h4, 'TIT_H4': titulo_h4, 'UF_H4': int(tot_uf * (pct_h4/100)),
-            'PCT_H5': pct_h5, 'TIT_H5': titulo_h5, 'UF_H5': int(tot_uf * (pct_h5/100)),
+            'PCT_H1': pct_h1, 'TIT_H1': titulo_h1, 'UF_H1': f"{int(tot_uf * (pct_h1/100)):,.0f}".replace(",", "."),
+            'PCT_H2': pct_h2, 'TIT_H2': titulo_h2, 'UF_H2': f"{int(tot_uf * (pct_h2/100)):,.0f}".replace(",", "."),
+            'PCT_H3': pct_h3, 'TIT_H3': titulo_h3, 'UF_H3': f"{int(tot_uf * (pct_h3/100)):,.0f}".replace(",", "."),
+            'PCT_H4': pct_h4, 'TIT_H4': titulo_h4, 'UF_H4': f"{int(tot_uf * (pct_h4/100)):,.0f}".replace(",", "."),
+            'PCT_H5': pct_h5, 'TIT_H5': titulo_h5, 'UF_H5': f"{int(tot_uf * (pct_h5/100)):,.0f}".replace(",", "."),
         }
         
         doc.render(contexto)
