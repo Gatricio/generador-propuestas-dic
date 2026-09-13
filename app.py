@@ -145,7 +145,7 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value="", placeholder="Ej: INFORME TÉCNICO DE CUANTIFICACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO (Síntesis Automática por Etapas)
+# PESTAÑA 2: ALCANCE Y CONTEXTO
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
@@ -227,7 +227,6 @@ with tab2:
 
             st.session_state.auto_actividades = "\n".join(act_blocks)
             
-            # Generación automática de la Síntesis (solo títulos de Etapas A, B, C, D)
             etapas_titulos = [
                 "Etapa A: Análisis de pertinencia de las situaciones reclamadas",
                 "Etapa B: Estimación de los Gastos Generales Extra proporcionales",
@@ -471,12 +470,12 @@ with tab4:
 
             'TOT_HH_GENERAL': int(tot_hh),
             
-            # Datos de Hitos
-            'PCT_H1': pct_h1, 'TIT_H1': titulo_h1, 'UF_H1': f"{int(tot_uf * (pct_h1/100)):,.0f}".replace(",", "."),
-            'PCT_H2': pct_h2, 'TIT_H2': titulo_h2, 'UF_H2': f"{int(tot_uf * (pct_h2/100)):,.0f}".replace(",", "."),
-            'PCT_H3': pct_h3, 'TIT_H3': titulo_h3, 'UF_H3': f"{int(tot_uf * (pct_h3/100)):,.0f}".replace(",", "."),
-            'PCT_H4': pct_h4, 'TIT_H4': titulo_h4, 'UF_H4': f"{int(tot_uf * (pct_h4/100)):,.0f}".replace(",", "."),
-            'PCT_H5': pct_h5, 'TIT_H5': titulo_h5, 'UF_H5': f"{int(tot_uf * (pct_h5/100)):,.0f}".replace(",", "."),
+            # Datos dinámicos para la Tabla 13.2 de Términos financieros
+            'TIT_H1': titulo_h1, 'PCT_H1': pct_h1, 'UF_H1': f"{int(tot_uf * (pct_h1/100)):,.0f}".replace(",", "."),
+            'TIT_H2': titulo_h2, 'PCT_H2': pct_h2, 'UF_H2': f"{int(tot_uf * (pct_h2/100)):,.0f}".replace(",", "."),
+            'TIT_H3': titulo_h3, 'PCT_H3': pct_h3, 'UF_H3': f"{int(tot_uf * (pct_h3/100)):,.0f}".replace(",", "."),
+            'TIT_H4': titulo_h4, 'PCT_H4': pct_h4, 'UF_H4': f"{int(tot_uf * (pct_h4/100)):,.0f}".replace(",", "."),
+            'TIT_H5': titulo_h5, 'PCT_H5': pct_h5, 'UF_H5': f"{int(tot_uf * (pct_h5/100)):,.0f}".replace(",", "."),
         }
         
         doc.render(contexto)
