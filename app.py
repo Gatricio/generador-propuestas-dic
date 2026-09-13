@@ -152,8 +152,6 @@ with tab2:
     
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
-    if "auto_sintesis_alcance" not in st.session_state:
-        st.session_state.auto_sintesis_alcance = ""
 
     intro = st.text_area(
         "4. Introducción / Contexto de la Obra (Input Usuario):", 
@@ -226,30 +224,13 @@ with tab2:
             )
 
             st.session_state.auto_actividades = "\n".join(act_blocks)
-            
-            etapas_titulos = [
-                "Etapa A: Análisis de pertinencia de las situaciones reclamadas",
-                "Etapa B: Estimación de los Gastos Generales Extra proporcionales",
-                "Etapa C: Cuantificación de mayores costos",
-                "Etapa D: Elaboración del Informe Final"
-            ]
-            st.session_state.auto_sintesis_alcance = "\n".join(etapas_titulos)
-            
-            st.success("¡Actividades y Síntesis por Etapas generadas automáticamente!")
+            st.success("¡Actividades generadas automáticamente!")
 
     st.markdown("---")
     actividades = st.text_area(
         "6. Actividades / Etapas Propuestas (Output Generado):", 
         value=st.session_state.auto_actividades, 
         height=280
-    )
-
-    sintesis_alcance_disp = st.text_area(
-        "Resumen / Síntesis del Alcance (Automático para Cuadro Resumen Cap. 1):",
-        value=st.session_state.auto_sintesis_alcance,
-        height=110,
-        disabled=True,
-        help="Este cuadro se genera de forma automática extrayendo únicamente los títulos de las Etapas del Capítulo 6."
     )
 
 # ---------------------------------------------------------
@@ -387,13 +368,27 @@ with tab4:
         str_duracion = f"{meses_val:.0f}" if meses_val.is_integer() else f"{meses_val}"
         monto_uf_palabras = numero_a_palabras_uf(tot_uf)
 
-        # Extracción de títulos de Etapas
+        # -----------------------------------------------------
+        # SÍNTESIS DEL ALCANCE (Aproximadamente 20% del Cap. 5)
+        # -----------------------------------------------------
+        if alcance.strip():
+            # Extrae las primeras frases u oraciones representativas
+            oraciones = [s.strip() for s in alcance.replace("\n", ". ").split(".") if s.strip()]
+            num_oraciones = max(1, int(len(oraciones) * 0.20))
+            resumen_alcance_20 = ". ".join(oraciones[:num_oraciones]) + "."
+        else:
+            resumen_alcance_20 = "El presente estudio comprende la evaluación técnica y contractual de los conceptos reclamados en el proyecto."
+
+        # -----------------------------------------------------
+        # FILTRADO DE ÍTEMS DE LA PROPUESTA (Únicamente Etapas Principales)
+        # -----------------------------------------------------
         lista_items_propuesta = []
         if actividades.strip():
             lines = actividades.split("\n")
             for line in lines:
                 line_str = line.strip()
-                if line_str.startswith("Etapa ") or line_str.startswith("A.") or line_str.startswith("B.") or line_str.startswith("C.") or line_str.startswith("D."):
+                # Se filtran únicamente los encabezados de Etapa A, B, C, D (excluyendo sub-puntos A.1, A.2, etc.)
+                if line_str.startswith("Etapa "):
                     lista_items_propuesta.append(line_str)
         
         if not lista_items_propuesta:
@@ -403,8 +398,6 @@ with tab4:
                 "Etapa C: Cuantificación de mayores costos",
                 "Etapa D: Elaboración del Informe Final"
             ]
-
-        resumen_alcance_final = "\n".join(lista_items_propuesta)
 
         contexto = {
             'CODIGO_PROPUESTA': codigo if codigo else "PR.DIC",
@@ -418,8 +411,8 @@ with tab4:
             'TELEFONO_SOLICITANTE': telefono_solicitante,
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
             'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),
-            'SINTESIS_ALCANCE': resumen_alcance_final,
-            'LISTA_ITEMS_PROPUESTA': lista_items_propuesta,
+            'SINTESIS_ALCANCE': resumen_alcance_20,  # <--- Inyecta la síntesis del ~20% del Cap. 5
+            'LISTA_ITEMS_PROPUESTA': lista_items_propuesta,  # <--- Únicamente Etapas Principales
             'PLAZO_MESES': str_duracion,
             'PLAZO_TEXTO': f"{str_duracion} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
