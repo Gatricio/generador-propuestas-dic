@@ -68,7 +68,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ---------------------------------------------------------
-# PESTAÑA 1: IDENTIFICACIÓN Y TIPO (Con Fecha y sin Nombre de Proyecto)
+# PESTAÑA 1: IDENTIFICACIÓN Y TIPO
 # ---------------------------------------------------------
 with tab1:
     st.subheader("Clasificación del Encargo")
@@ -309,6 +309,7 @@ with tab4:
         
         doc = DocxTemplate(template_path)
         
+        # Filtro de lista limpia para iteración Jinja2 por viñetas
         lista_excl = []
         if excl1.strip(): lista_excl.append(excl1.strip())
         if excl2.strip(): lista_excl.append(excl2.strip())
@@ -328,7 +329,7 @@ with tab4:
             'EMAIL_SOLICITANTE': email_solicitante,
             'TELEFONO_SOLICITANTE': telefono_solicitante,
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
-            'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),  # Fecha formateada seleccionada en Pestaña 1
+            'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),
             'SINTESIS_ALCANCE': resumen_alcance_final,
             'PLAZO_TEXTO': f"{meses_val:.0f} meses" if meses_val.is_integer() else f"{meses_val} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
@@ -337,7 +338,7 @@ with tab4:
             'TEXTO_INTRODUCCION': intro,
             'TEXTO_ALCANCE_DETALLADO': alcance,
             'TEXTO_ACTIVIDADES_ETAPAS': actividades,
-            'LISTA_EXCLUSIONES': lista_excl,
+            'LISTA_EXCLUSIONES': lista_excl,  # Se pasa la lista para la iteración {% for item in LISTA_EXCLUSIONES %}
             'NOTA_IMPUESTOS_IVA': regimen_iva,
             
             # Datos de Horas Hombre
