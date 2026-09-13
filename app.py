@@ -68,7 +68,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ---------------------------------------------------------
-# PESTAÑA 1: IDENTIFICACIÓN Y TIPO (Ajuste 1 y 4: Campos limpios + Teléfono)
+# PESTAÑA 1: IDENTIFICACIÓN Y TIPO (Campo Nombre Propuesta en blanco)
 # ---------------------------------------------------------
 with tab1:
     st.subheader("Clasificación del Encargo")
@@ -87,13 +87,10 @@ with tab1:
         telefono_solicitante = st.text_input("Teléfono Solicitante:", value="", placeholder="+56 9 ...")
         rol_cam = st.text_input("Tribunal / Rol Arbitral (Solo CAM):", value="", placeholder="Rol CAM N°...")
     
-    nombre_proyecto = st.text_input("Nombre del Proyecto / Referencia:", value="", placeholder="Nombre oficial del proyecto...")
-    
-    default_prop_title = "PERITAJE TÉCNICO ARBITRAL" if "CAM" in tipo_encargo else "INFORME TÉCNICO DE CUANTIFICACIÓN DE MAYORES COSTOS"
-    nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value=default_prop_title)
+    nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta:", value="", placeholder="Ej: INFORME TÉCNICO DE CUANTIFICACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO (Ajuste 5: Resumen del Alcance para Tabla Cap 1)
+# PESTAÑA 2: ALCANCE Y CONTEXTO
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
@@ -190,11 +187,11 @@ with tab2:
     )
 
 # ---------------------------------------------------------
-# PESTAÑA 3: HORAS HOMBRE Y PERFILES
+# PESTAÑA 3: HORAS HOMBRE Y PERFILES (Valores en 0 por defecto)
 # ---------------------------------------------------------
 with tab3:
     st.subheader("Estimación de Recursos y Perfiles Profesionales")
-    meses_val = st.number_input("Plazo Total del Estudio (Meses):", min_value=0.5, step=0.5, value=3.0)
+    meses_val = st.number_input("Plazo Total del Estudio (Meses):", min_value=0.5, step=0.5, value=1.0)
     
     col_hdr1, col_hdr2, col_hdr3 = st.columns([2, 1, 1])
     with col_hdr1: st.markdown("**Categoría Profesional**")
@@ -203,38 +200,38 @@ with tab3:
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Asesor Técnico / Revisor")
-    with c2: hh_asesor = st.number_input("HH Asesor", min_value=0, value=10, label_visibility="collapsed")
-    with c3: tar_asesor = st.number_input("Tarifa Asesor", min_value=0.0, value=2.0, step=0.1, label_visibility="collapsed")
+    with c2: hh_asesor = st.number_input("HH Asesor", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_asesor = st.number_input("Tarifa Asesor", min_value=0.0, value=0.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Jefe de Proyecto / Asesoría")
-    with c2: hh_jefe = st.number_input("HH Jefe", min_value=0, value=60, label_visibility="collapsed")
-    with c3: tar_jefe = st.number_input("Tarifa Jefe", min_value=0.0, value=1.5, step=0.1, label_visibility="collapsed")
+    with c2: hh_jefe = st.number_input("HH Jefe", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_jefe = st.number_input("Tarifa Jefe", min_value=0.0, value=0.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 1")
-    with c2: hh_an1 = st.number_input("HH Profesional 1", min_value=0, value=180, label_visibility="collapsed")
-    with c3: tar_an1 = st.number_input("Tarifa Prof. 1", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+    with c2: hh_an1 = st.number_input("HH Profesional 1", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_an1 = st.number_input("Tarifa Prof. 1", min_value=0.0, value=0.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 2")
-    with c2: hh_an2 = st.number_input("HH Profesional 2", min_value=0, value=180, label_visibility="collapsed")
-    with c3: tar_an2 = st.number_input("Tarifa Prof. 2", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+    with c2: hh_an2 = st.number_input("HH Profesional 2", min_value=0, value=0, label_visibility="collapsed")
+    with c3: tar_an2 = st.number_input("Tarifa Prof. 2", min_value=0.0, value=0.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 3")
     with c2: hh_an3 = st.number_input("HH Profesional 3", min_value=0, value=0, label_visibility="collapsed")
-    with c3: tar_an3 = st.number_input("Tarifa Prof. 3", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+    with c3: tar_an3 = st.number_input("Tarifa Prof. 3", min_value=0.0, value=0.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 4")
     with c2: hh_an4 = st.number_input("HH Profesional 4", min_value=0, value=0, label_visibility="collapsed")
-    with c3: tar_an4 = st.number_input("Tarifa Prof. 4", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+    with c3: tar_an4 = st.number_input("Tarifa Prof. 4", min_value=0.0, value=0.0, step=0.1, label_visibility="collapsed")
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: st.write("Profesional de Asesoría 5")
     with c2: hh_an5 = st.number_input("HH Profesional 5", min_value=0, value=0, label_visibility="collapsed")
-    with c3: tar_an5 = st.number_input("Tarifa Prof. 5", min_value=0.0, value=1.0, step=0.1, label_visibility="collapsed")
+    with c3: tar_an5 = st.number_input("Tarifa Prof. 5", min_value=0.0, value=0.0, step=0.1, label_visibility="collapsed")
 
     num_profesionales_activos = sum([1 for hh in [hh_an1, hh_an2, hh_an3, hh_an4, hh_an5] if hh > 0])
 
@@ -317,7 +314,6 @@ with tab4:
         if excl3.strip(): lista_excl.append(excl3.strip())
         if excl4.strip(): lista_excl.append(excl4.strip())
 
-        # Si el usuario no ingresó síntesis, se usa el inicio del alcance
         resumen_alcance_final = sintesis_alcance.strip() if sintesis_alcance.strip() else (alcance[:250] + "..." if len(alcance) > 250 else alcance)
 
         contexto = {
@@ -329,11 +325,11 @@ with tab4:
             'NOMBRE_SOLICITANTE': solicitante,
             'CARGO_SOLICITANTE': cargo_solicitante,
             'EMAIL_SOLICITANTE': email_solicitante,
-            'TELEFONO_SOLICITANTE': telefono_solicitante,  # Ajuste 4: Teléfono
+            'TELEFONO_SOLICITANTE': telefono_solicitante,
             'NOMBRE_PROYECTO': nombre_proyecto,
             'ROL_CAM_O_TRIBUNAL': rol_cam if rol_cam else "N/A",
-            'FECHA_EMISION': datetime.date.today().strftime("%d-%m-%Y"),  # Ajuste 3: Fecha dinámica
-            'SINTESIS_ALCANCE': resumen_alcance_final,  # Ajuste 5: Resumen Alcance
+            'FECHA_EMISION': datetime.date.today().strftime("%d-%m-%Y"),
+            'SINTESIS_ALCANCE': resumen_alcance_final,
             'PLAZO_TEXTO': f"{meses_val:.0f} meses" if meses_val.is_integer() else f"{meses_val} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
             'MONTO_UF_TOTAL': f"{tot_uf:,.0f}".replace(",", "."),
