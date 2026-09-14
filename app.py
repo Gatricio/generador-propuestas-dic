@@ -29,7 +29,7 @@ def numero_a_palabras_uf(n):
         return "cero"
 
     unidades = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"]
-    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "diecisiete", "dieciocho", "diecinueve"]
+    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "dieiciséis", "diecisiete", "dieciocho", "diecinueve"]
     especiales[6] = "dieciséis"
     decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"]
     centenas = ["", "ciento", "doscientas", "trescientas", "cuatrocientas", "quinientas", "seiscientas", "setecientas", "ochocientas", "novecientas"]
@@ -126,12 +126,12 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ---------------------------------------------------------
 with tab1:
     st.subheader("Clasificación del Encargo")
-    tipo_encargo = st.radio("Tipo de Servicio:", ["Informe Técnico de Parte (Cliente Directo)", "Peritaje Judicial / Arbitral CAM (Designación de Tribunal)"])
+    tipo_encargo = st.radio("Tipo de Servicio:", ["Informe Técnico de Parte (Cliente Directo)", "Peritaje Judicial / Arbitral CAM (Designación por Tribunal)"])
     
     col1, col2 = st.columns(2)
     with col1:
         codigo = st.text_input("Código de Propuesta:", value="", placeholder="Ingrese código PR.DIC...")
-        cliente = st.text_input("Cliente / Razón Social o Tribunal:", value="", placeholder="Ingrese razón social o Tribunal Arbitral CAM...")
+        cliente = st.text_input("Cliente / Razón Social o Tribunal:", value="", placeholder="Ingrese razón social del cliente o Tribunal Arbitral...")
         solicitante = st.text_input("Nombre Solicitante / Juez Árbitro:", value="", placeholder="Nombre del solicitante o Sr. Árbitro...")
         cargo_solicitante = st.text_input("Cargo Solicitante:", value="", placeholder="Cargo del solicitante / Juez Árbitro...")
         fecha_emision = st.date_input("Fecha de Emisión:", value=datetime.date.today(), format="DD/MM/YYYY")
@@ -140,9 +140,9 @@ with tab1:
         rut_cliente = st.text_input("RUT Cliente / Tribunal:", value="", placeholder="RUT...")
         email_solicitante = st.text_input("Email Solicitante:", value="", placeholder="correo@ejemplo.cl")
         telefono_solicitante = st.text_input("Teléfono Solicitante:", value="", placeholder="+56 9 ...")
-        rol_cam = st.text_input("Tribunal / Rol Arbitral CAM:", value="", placeholder="Rol CAM N°...")
+        rol_cam = st.text_input("Tribunal / Rol Arbitral CAM (Si aplica):", value="", placeholder="Rol CAM N°...")
     
-    nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta / Peritaje:", value="", placeholder="Ej: PERITAJE TÉCNICO INDEPENDIENTE ROL CAM N°...")
+    nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta / Peritaje:", value="", placeholder="Ej: INFORME TÉCNICO DE PERTINENCIA, IMPACTO EN PLAZO Y EVALUACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
 # PESTAÑA 2: ALCANCE Y CONTEXTO
@@ -153,30 +153,18 @@ with tab2:
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
 
-    tipo_estudio = st.selectbox(
-        "Seleccione el Enfoque Metodológico Específico de IDIEM:",
-        [
-            "Peritaje Judicial / Arbitral CAM (Designación por Tribunal y Respuesta a Puntos de Prueba)",
-            "Estudio de Pertinencia e Impacto en Plazo y Costos (Claims / Obras de Infraestructura)",
-            "Peritaje de Auditoría Normativa de Infraestructura y Brechas Sanitarias/Técnicas",
-            "Informe Forense de Evaluación de Causales de Término Anticipado de Contrato",
-            "Análisis Pericial de Discrepancias Metodológicas y Contra-peritaje de Prueba",
-            "Análisis Técnico-Contractual de Rendimientos, Productividad y Equipos"
-        ]
-    )
-
     intro = st.text_area(
         "4. Introducción / Contexto de la Obra (Input Usuario):", 
         value="", 
-        placeholder="Ingrese el contexto detallado del juicio arbitral, partes intervinientes, contrato y controversia...", 
-        height=140
+        placeholder="Ingrese el contexto detallado del contrato, partes intervinientes, obra y controversias (retrasos, mayores costos, normas, hallazgos, etc.)...", 
+        height=160
     )
     
     alcance = st.text_area(
-        "5. Alcance Detallado (Puntos de Prueba decretados por el Tribunal - Input Usuario):", 
+        "5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba - Input Usuario):", 
         value="", 
-        placeholder="Ingrese los Puntos de Prueba transcritos del Acta de Designación Pericial...", 
-        height=140
+        placeholder="Ingrese detalladamente las materias o Puntos de Prueba a analizar (plazos, gastos generales, obras adicionales, rendimientos, normativas, multas, etc.)...", 
+        height=160
     )
 
     st.markdown("---")
@@ -186,71 +174,55 @@ with tab2:
         if not intro.strip() and not alcance.strip():
             st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar.")
         else:
-            act_blocks = ["Para responder expresamente a cada uno de los puntos de prueba decretados por el Tribunal Arbitral, se contempla desarrollar las siguientes etapas y actividades:\n"]
+            txt_comb = (intro + " " + alcance).lower()
+            client_ref = cliente if cliente else "el Cliente / Solicitante"
             
-            if "Designación por Tribunal" in tipo_estudio:
-                act_blocks.append("Etapa A: Visita a terreno y verificación in situ\n")
-                act_blocks.append("Considera la asistencia a una inspección en terreno por parte del Perito Senior y del Jefe de Proyecto IDIEM a las instalaciones objeto de la controversia. Se solicitará la presencia del Tribunal Arbitral y de las Partes con el fin de observar el estado real de las obras, tomar notas y recepcionar consultas. Durante la visita, IDIEM resguardará el estricto principio de neutralidad pericial, limitándose a la constatación de hechos empíricos sin emitir juzgamientos preliminares.\n")
-                
-                act_blocks.append("Etapa B: Análisis de los documentos del expediente y definición de la línea base contractual\n")
-                act_blocks.append("Considera la revisión exhaustiva de todos los antecedentes allegados al expediente del proceso arbitral (contrato de construcción, bases de licitación, aclaraciones, ofertas, especificaciones técnicas, programas de obra oficiales y resoluciones). A partir de este análisis se establecerá la línea base contractual y el orden de prelación aplicable para la resolución técnica de las controversias.\n")
-                
-                act_blocks.append("Etapa C: Análisis de pertinencia técnica de los Puntos de Prueba\n")
-                act_blocks.append("Considera la revisión sistemática de los registros contemporáneos de la obra (libros de obra, cartas formales, RDI, informes de inspección, minutas y estados de pago) para dar respuesta a cada punto de prueba, determinando la ocurrencia real de los hechos, el cumplimiento de las Especificaciones Técnicas, la factibilidad de reutilización de equipos, el origen de adicionales y la procedencia de retenciones o cobros de garantías.\n")
+            act_blocks = ["Para responder de manera integral al alcance solicitado, se contemplan las siguientes etapas y actividades de ingeniería contractual:\n"]
+            
+            # --- SI ES PERITAJE JUDICIAL / CAM ---
+            if "Peritaje Judicial" in tipo_encargo or "cam" in txt_comb or "arbitral" in txt_comb or "tribunal" in txt_comb:
+                act_blocks.append("Etapa A: Inspección en terreno y verificación in situ")
+                act_blocks.append("Considera la realización de una visita a terreno por parte del equipo pericial de IDIEM para examinar directamente las condiciones físicas de la obra, recintos e instalaciones involucradas en los puntos de prueba. Durante la inspección se resguardará el principio de neutralidad, recopilando antecedentes técnicos empíricos sin emitir juzgamientos preliminares.\n")
 
-                act_blocks.append("Etapa D: Análisis retrospectivo de impacto en plazo (Ruta Crítica)\n")
-                act_blocks.append("Realización de un análisis retrospectivo de retrasos sobre los programas maestros oficiales aprobados (Primavera P6 / MS Project), evaluando el efecto que cada evento validado tuvo sobre los hitos intermedios y la fecha de término, determinando la existencia de atrasos concurrentes o alteraciones de la secuencia constructiva.\n")
+                act_blocks.append("Etapa B: Definición de la línea base contractual y normativa")
+                act_blocks.append(f"Considera la revisión exhaustiva de los antecedentes del expediente (contratos, bases de licitación, aclaraciones, especificaciones técnicas, planos as-built, normativas aplicables y resoluciones) para fijar la línea base del proyecto y el orden de prelación contractual.\n")
 
-                act_blocks.append("Etapa E: Análisis de impactos económicos y perjuicios\n")
-                act_blocks.append("Cuantificación objetiva de los mayores costos directos, indirectos, gastos generales proporcionales o sobrecostos por terminación de obras derivados de los puntos de prueba validados, realizando la homogeneización de monedas (CLP / UF / USD) según corresponda.\n")
+                act_blocks.append("Etapa C: Análisis de pertinencia técnica de los Puntos de Prueba")
+                act_blocks.append("Revisión y contrastación de los registros contemporáneos de la obra (libros de obra, cartas, RDI, minutas y reportes) para evaluar técnicamente cada punto de prueba solicitado por el Tribunal Arbitral, verificando la ocurrencia real de los hechos, cambios de condición o eventuales interferencias.\n")
 
-                act_blocks.append("Etapa F: Elaboración del Informe Pericial Imparcial\n")
-                act_blocks.append("Emisión de un Informe Técnico Pericial independiente, claro y debidamente fundado, redactado en lenguaje de ingeniería neutral, que dé respuesta expresa y ordenada a cada uno de los Puntos de Prueba del S.J.A., acompañado de sus respectivas carpetas y anexos de respaldo documental.\n")
+                if any(k in txt_comb for k in ["plazo", "atraso", "retraso", "ruta crítica", "programa", "cronograma", "hitos"]):
+                    act_blocks.append("Etapa D: Análisis retrospectivo de impacto en plazo (Ruta Crítica)")
+                    act_blocks.append("Evaluación retrospectiva sobre los programas de obra oficiales (Primavera P6 / MS Project), determinando el efecto de los eventos validados sobre la ruta crítica, hitos intermedios y fecha de término, así como la identificación de atrasos concurrentes.\n")
 
-            elif "Auditoría Normativa" in tipo_estudio:
-                act_blocks.append("Etapa A: Revisión normativa y marco de cumplimiento\n")
-                act_blocks.append("Identificación del marco legal, reglamentario y normativo sanitario aplicable a la infraestructura (p. ej. Decreto Supremo N° 45 MINSAL), construyendo la matriz de cumplimiento que sirva de base para el análisis pericial.\n")
+                if any(k in txt_comb for k in ["costo", "gasto", "económic", "presupuesto", "adicional", "multa", "retencion", "garantia", "cuantific"]):
+                    act_blocks.append("Etapa E: Evaluación económica y cuantificación de impactos")
+                    act_blocks.append("Determinación y cuantificación de mayores costos directos, indirectos, gastos generales proporcionales o cobro de retenciones y garantías asociados a los puntos de prueba, sobre bases técnicas objetivas de mercado y normas vigentes.\n")
 
-                act_blocks.append("Etapa B: Análisis del grado de cumplimiento normativo y verificación técnica\n")
-                act_blocks.append("Verificación técnica y métrica in situ de las condiciones de infraestructura (planos as-built, resoluciones sanitarias, permisos municipales e instalaciones críticas) identificando cumplimientos e incumplimientos verificables al momento relevante.\n")
+                act_blocks.append("Etapa F: Elaboración del Informe Pericial Imparcial")
+                act_blocks.append("Emisión de un Informe Técnico Pericial independiente, claro y fundado, que dé respuesta expresa y ordenada a cada uno de los Puntos de Prueba, acompañado de sus correspondientes anexos de respaldo.\n")
 
-                act_blocks.append("Etapa C: Definición y cuantificación de adecuaciones normativas\n")
-                act_blocks.append("Identificación de brechas detectadas y cubicación económica de las obras necesarias para la normalización técnica de los recintos sobre bases de mercado objetivas.\n")
-
-                act_blocks.append("Etapa D: Identificación de obras ejecutadas en periodos recientes\n")
-                act_blocks.append("Análisis documental para distinguir entre labores de mantención ordinaria y adecuaciones normativas obligatorias ejecutadas, valorizando los costos incurridos.\n")
-
-                act_blocks.append("Etapa E: Presentación del Informe Pericial al Tribunal\n")
-                act_blocks.append("Entrega de un Informe Técnico Pericial imparcial y fundado que dé respuesta expresa a los puntos del alcance solicitado por la parte demandante o el tribunal.\n")
-
-            elif "Pertinencia e Impacto en Plazo y Costos" in tipo_estudio:
-                act_blocks.append("Etapa A: Análisis de pertinencia técnico-contractual de las situaciones reclamadas\n")
-                act_blocks.append("Revisión de la línea base contractual y programática para verificar si cada evento reclamado constituye un cambio de condición respecto de lo originalmente pactado, construyendo la trazabilidad documental de respaldo.\n")
-
-                act_blocks.append("Etapa B: Análisis de impacto en el programa de obras (Delay Analysis)\n")
-                act_blocks.append("Evaluación sobre los programas de obra aprobados (Rev0/Rev1) mediante modelamiento de impactos en la ruta crítica para cuantificar las extensiones de plazo procedentes.\n")
-
-                act_blocks.append("Etapa C: Cuantificación de mayores costos y Gastos Generales\n")
-                act_blocks.append("Determinación de costos directos, indirectos y Gastos Generales extra proporcionales conforme a la normativa contractual aplicable.\n")
-
-                act_blocks.append("Etapa D: Elaboración del Informe Final\n")
-                act_blocks.append("Consolidación del estudio en un informe técnico imparcial y fundado con carpetas de respaldo contemporáneo.\n")
-
+            # --- SI ES INFORME TÉCNICO DE PARTE / ASESORÍA ---
             else:
-                act_blocks.append("Etapa A: Definición de la línea base contractual e identificación de hechos\n")
-                act_blocks.append("Revisión de los antecedentes contractuales y del expediente para establecer los parámetros de comparación técnica.\n")
+                act_blocks.append("Etapa A: Análisis de pertinencia técnico-contractual de las situaciones reclamadas")
+                act_blocks.append("A.1 Análisis de antecedentes y línea base contractual")
+                act_blocks.append(f"Considera la revisión de los antecedentes contractuales y de licitación proporcionados por {client_ref} (bases, aclaraciones, contratos, programa base Rev0 y especificaciones técnicas) para establecer la línea base contractual y programática.\n")
+                
+                act_blocks.append("A.2 Análisis del cambio de condición y trazabilidad documental")
+                act_blocks.append("Evaluación sistemática de cada evento o reclamación para determinar si constituye una alteración objetiva respecto de la línea base, ordenando la documentación contemporánea de obra (libros de obra, RDI, cartas, informes de inspección) que acredite su origen y consecuencia.\n")
 
-                act_blocks.append("Etapa B: Análisis técnico pericial y contrastación documental\n")
-                act_blocks.append("Evaluación sistemática de los registros de obra, pruebas técnicas y mediciones de campo.\n")
+                if any(k in txt_comb for k in ["plazo", "atraso", "retraso", "ruta crítica", "programa", "cronograma", "delay"]):
+                    act_blocks.append("Etapa B: Análisis de impacto en el programa de obras (Delay Analysis)")
+                    act_blocks.append("Revisión del programa de construcción vigente al momento de los hechos (lógica de red y restricciones) e inserción de las situaciones pertinentes como actividades independientes para evaluar su impacto real sobre la ruta crítica y el plazo contractual.\n")
 
-                act_blocks.append("Etapa C: Cuantificación de impactos y variaciones\n")
-                act_blocks.append("Determinación económica e impacto en plazo de las desviaciones identificadas.\n")
+                if any(k in txt_comb for k in ["costo", "gasto", "económic", "presupuesto", "adicional", "productividad", "rendimiento"]):
+                    act_blocks.append("Etapa C: Cuantificación de mayores costos, Gastos Generales y pérdidas de productividad")
+                    act_blocks.append("Determinación y cuantificación de mayores costos directos, indirectos y Gastos Generales extra proporcionales (conforme a la oferta, DS N° 75 / RCOP o DS N° 236), así como la evaluación de desviaciones en rendimiento o productividad si correspondiere.\n")
 
-                act_blocks.append("Etapa D: Emisión del Informe Pericial IDIEM\n")
-                act_blocks.append("Redacción del dictamen pericial neutral con sus anexos de respaldo.\n")
+                act_blocks.append("Etapa D: Elaboración del Informe Final")
+                act_blocks.append("Consolidación de los análisis en un informe técnico pericial imparcial y fundado, estructurado con trazabilidad documental, matrices de análisis y carpetas de respaldo.\n")
 
             st.session_state.auto_actividades = "\n".join(act_blocks)
-            st.success("¡Actividades redactadas bajo el estándar de Peritaje por Designación Arbitral (CAM)!")
+            st.success("¡Actividades redactadas con enfoque multidisciplinario e integral IDIEM!")
 
     st.markdown("---")
     actividades = st.text_area(
@@ -330,7 +302,7 @@ with tab4:
     
     st.markdown("#### 11. Exclusiones del Servicio (4 Espacios Editables)")
     excl1 = st.text_input("Exclusión 1:", value="Visitas a terreno adicionales no contempladas expresamente en la propuesta.")
-    excl2 = st.text_input("Exclusión 2:", value="Analizar materias o puntos de prueba no incluidos en la resolución pericial o alcance acordado.")
+    excl2 = st.text_input("Exclusión 2:", value="Analizar materias o puntos de prueba no incluidos en el alcance o resolución pericial acordada.")
     excl3 = st.text_input("Exclusión 3:", value="Emisión de opiniones legales o interpretaciones de derecho, limitándose el servicio al análisis técnico-contractual de ingeniería.")
     excl4 = st.text_input("Exclusión 4 (Opcional):", value="")
 
@@ -399,7 +371,7 @@ with tab4:
             num_oraciones = max(1, int(len(oraciones) * 0.20))
             resumen_alcance_20 = ". ".join(oraciones[:num_oraciones]) + "."
         else:
-            resumen_alcance_20 = "El presente peritaje comprende la evaluación técnica e independiente de los puntos de prueba decretados por el Tribunal Arbitral."
+            resumen_alcance_20 = "El presente estudio comprende la evaluación técnica y contractual de los conceptos e impactos reclamados en el proyecto."
 
         lista_items_propuesta = []
         if actividades.strip():
@@ -411,12 +383,10 @@ with tab4:
         
         if not lista_items_propuesta:
             lista_items_propuesta = [
-                "Etapa A: Visita a terreno y verificación in situ",
-                "Etapa B: Análisis de los documentos del expediente",
-                "Etapa C: Análisis de pertinencia técnica de los Puntos de Prueba",
-                "Etapa D: Análisis retrospectivo de impacto en plazo",
-                "Etapa E: Análisis de impactos económicos",
-                "Etapa F: Elaboración del Informe Pericial Imparcial"
+                "Etapa A: Análisis de pertinencia técnico-contractual de las situaciones reclamadas",
+                "Etapa B: Análisis de impacto en el programa de obras (Delay Analysis)",
+                "Etapa C: Cuantificación de mayores costos y Gastos Generales",
+                "Etapa D: Elaboración del Informe Final"
             ]
 
         lista_introduccion_lineas = [l.strip() for l in intro.split("\n") if l.strip()]
