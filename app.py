@@ -369,7 +369,7 @@ with tab4:
         monto_uf_palabras = numero_a_palabras_uf(tot_uf)
 
         # -----------------------------------------------------
-        # SÍNTESIS DEL ALCANCE (Aproximadamente 20% del Cap. 5)
+        # SÍNTESIS DEL ALCANCE (~20% del Cap. 5)
         # -----------------------------------------------------
         if alcance.strip():
             oraciones = [s.strip() for s in alcance.replace("\n", ". ").split(".") if s.strip()]
@@ -396,6 +396,14 @@ with tab4:
                 "Etapa C: Cuantificación de mayores costos",
                 "Etapa D: Elaboración del Informe Final"
             ]
+
+        # -----------------------------------------------------
+        # PROCESAMIENTO DE LÍNEAS PARA LOS CAPÍTULOS 4, 5 Y 6
+        # (Soporte anti-estiramiento de texto)
+        # -----------------------------------------------------
+        lista_introduccion_lineas = [l.strip() for l in intro.split("\n") if l.strip()]
+        lista_alcance_lineas = [l.strip() for l in alcance.split("\n") if l.strip()]
+        lista_actividades_lineas = [l.strip() for l in actividades.split("\n") if l.strip()]
 
         # -----------------------------------------------------
         # CONSTRUCCIÓN DE LA LISTA DE FORMA DE PAGO PARA EL CAP. 1
@@ -426,7 +434,7 @@ with tab4:
             'FECHA_EMISION': fecha_emision.strftime("%d-%m-%Y"),
             'SINTESIS_ALCANCE': resumen_alcance_20,
             'LISTA_ITEMS_PROPUESTA': lista_items_propuesta,
-            'LISTA_HITOS_FORMA_PAGO': lista_hitos_forma_pago,  # <--- Inyección para la celda Forma de pago
+            'LISTA_HITOS_FORMA_PAGO': lista_hitos_forma_pago,
             'PLAZO_MESES': str_duracion,
             'PLAZO_TEXTO': f"{str_duracion} meses",
             'NUM_PROFESIONALES_ASESORIA': f"{num_profesionales_activos} Profesionales de Asesoría",
@@ -436,6 +444,12 @@ with tab4:
             'TEXTO_INTRODUCCION': intro,
             'TEXTO_ALCANCE_DETALLADO': alcance,
             'TEXTO_ACTIVIDADES_ETAPAS': actividades,
+            
+            # Listas para renderizado limpio línea a línea (Capítulos 4, 5 y 6)
+            'LISTA_INTRODUCCION_LINEAS': lista_introduccion_lineas,
+            'LISTA_ALCANCE_LINEAS': lista_alcance_lineas,
+            'LISTA_ACTIVIDADES_LINEAS': lista_actividades_lineas,
+            
             'LISTA_EXCLUSIONES': lista_excl,
             'NOTA_IMPUESTOS_IVA': regimen_iva,
             
