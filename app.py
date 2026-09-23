@@ -1,4 +1,5 @@
 import os
+import re
 import datetime
 from io import BytesIO
 import streamlit as st
@@ -21,6 +22,97 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
+# FUNCIONES DE MEJORA Y PULIDO DE REDACCIÓN (CAPS 4 Y 5)
+# ---------------------------------------------------------
+def pulir_introduccion(texto, cliente_val, propuesta_val):
+    if not texto.strip():
+        return ""
+    
+    # Limpieza de espacios y saltos redundantes
+    lineas = [l.strip() for l in texto.split("\n") if l.strip()]
+    
+    # Correcciones ortográficas y de conectores contractuales habituales
+    reemplazos = {
+        r"\bcodelco\b": "CODELCO",
+        r"\bmetro\b": "METRO S.A.",
+        r"\bminvu\b": "MINVU",
+        r"\bmop\b": "MOP",
+        r"\bcam\b": "CAM Santiago",
+        r"\bito\b": "ITO",
+        r"\brdi\b": "RDI",
+        r"\brcop\b": "RCOP",
+        r"\bee.tt\b": "EETT",
+        r"\beett\b": "EETT",
+        r"\ba causa de\b": "en razón de",
+        r"\bpor culpa de\b": "derivado de la situación ocurrida en",
+        r"\batraso\b": "desviación en los plazos de ejecución",
+    }
+    
+    texto_procesado = "\n".join(lineas)
+    for patron, reemp in reemplazos.items():
+        texto_procesado = re.sub(patron, reemp, texto_procesado, flags=re.IGNORECASE)
+    
+    # Encabezado formal según datos ingresados
+    cliente_ref = cliente_val if cliente_val.strip() else "el Cliente"
+    prop_ref = propuesta_val if propuesta_val.strip() else "el estudio técnico-contractual solicitado"
+    
+    parrafos_pulidos = []
+    
+    # Párrafo 1: Contextualización formal
+    parrafos_pulidos.append(
+        f"El presente documento corresponde a la propuesta técnica y económica desarrollada por IDIEM para {cliente_ref}, "
+        f"referida al servicio denominado \"{prop_ref}\"."
+    )
+    
+    # Párrafos subsiguientes: Estructuración de las ideas del usuario
+    for l in lineas:
+        # Asegurar mayúscula inicial y punto final
+        l_corregida = l[0].upper() + l[1:] if len(l) > 1 else l.upper()
+        if not l_corregida.endswith("."):
+            l_corregida += "."
+        
+        # Evitar duplicar el Párrafo 1 si el usuario ya había puesto algo similar
+        if "propuesta técnica" not in l_corregida.lower() and "idiem" not in l_corregida.lower():
+            parrafos_pulidos.append(l_corregida)
+            
+    return "\n\n".join(parrafos_pulidos)
+
+
+def pulir_alcance(texto):
+    if not texto.strip():
+        return ""
+    
+    lineas = [l.strip() for l in texto.split("\n") if l.strip()]
+    
+    reemplazos = {
+        r"\bver\b": "Evaluar y analizar",
+        r"\brevisar\b": "Analizar la pertinencia técnico-contractual de",
+        r"\bcalcular\b": "Cuantificar económicamente",
+        r"\bver si\b": "Determinar si",
+        r"\bcobrar\b": "Valorizar",
+    }
+    
+    items_pulidos = []
+    items_pulidos.append("De acuerdo con los requerimientos expresados, el alcance del presente estudio considera analizar e informar sobre los siguientes puntos específicos:")
+    
+    for l in lineas:
+        # Quitar viñetas previas si las puso el usuario
+        l_clean = re.sub(r"^[\-\*\•\d\.\)]+\s*", "", l).strip()
+        if not l_clean:
+            continue
+            
+        for patron, reemp in reemplazos.items():
+            l_clean = re.sub(patron, reemp, l_clean, flags=re.IGNORECASE)
+            
+        l_clean = l_clean[0].upper() + l_clean[1:] if len(l_clean) > 1 else l_clean.upper()
+        if not l_clean.endswith("."):
+            l_clean += "."
+            
+        items_pulidos.append(f"• {l_clean}")
+        
+    return "\n".join(items_pulidos)
+
+# ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
 # ---------------------------------------------------------
 def numero_a_palabras_uf(n):
@@ -29,7 +121,7 @@ def numero_a_palabras_uf(n):
         return "cero"
 
     unidades = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"]
-    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "dieiciséis", "diecisiete", "diecisiete", "dieciocho", "diecinueve"]
+    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "diecisiete", "dieciocho", "diecinueve"]
     especiales[6] = "dieciséis"
     decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"]
     centenas = ["", "ciento", "doscientas", "trescientas", "cuatrocientas", "quinientas", "seiscientas", "setecientas", "ochocientas", "novecientas"]
@@ -150,31 +242,61 @@ with tab1:
 with tab2:
     st.subheader("Descripción del Conflicto y Propuesta Técnica")
     
+    if "text_intro" not in st.session_state:
+        st.session_state.text_intro = ""
+    if "text_alcance" not in st.session_state:
+        st.session_state.text_alcance = ""
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
 
-    intro = st.text_area(
-        "4. Introducción / Contexto de la Obra (Input Usuario):", 
-        value="", 
-        placeholder="Ingrese el contexto detallado del contrato, partes intervinientes, obra y controversias (retrasos, mayores costos, normas, hallazgos, etc.)...", 
-        height=160
+    # --- PUNTOS 4 Y 5 CON PULIDO DE REDACCIÓN ---
+    st.markdown("#### 4. Introducción / Contexto de la Obra")
+    intro_input = st.text_area(
+        "Ingrese antecedentes del contrato, obra y conflicto:", 
+        value=st.session_state.text_intro, 
+        placeholder="Ingrese borrador o notas del contexto...", 
+        height=140,
+        key="key_intro_area"
     )
-    
-    alcance = st.text_area(
-        "5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba - Input Usuario):", 
-        value="", 
-        placeholder="Ingrese detalladamente las materias o Puntos de Prueba a analizar (plazos, gastos generales, obras adicionales, rendimientos, normativas, multas, etc.)...", 
-        height=160
+    st.session_state.text_intro = intro_input
+
+    if st.button("✨ Pulir y Mejorar Redacción del Capítulo 4 (Introducción)"):
+        if not st.session_state.text_intro.strip():
+            st.warning("Por favor ingrese algún texto borrador en el Capítulo 4 antes de pulir.")
+        else:
+            texto_pulido_4 = pulir_introduccion(st.session_state.text_intro, cliente, nombre_propuesta)
+            st.session_state.text_intro = texto_pulido_4
+            st.success("¡Capítulo 4 pulido con tono técnico-contractual de IDIEM!")
+            st.rerun()
+
+    st.markdown("---")
+    st.markdown("#### 5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba)")
+    alcance_input = st.text_area(
+        "Ingrese el desglose de materias, reclamaciones o Puntos de Prueba:", 
+        value=st.session_state.text_alcance, 
+        placeholder="Ingrese borrador o lista de puntos de prueba...", 
+        height=140,
+        key="key_alcance_area"
     )
+    st.session_state.text_alcance = alcance_input
+
+    if st.button("✨ Pulir y Mejorar Redacción del Capítulo 5 (Alcance)"):
+        if not st.session_state.text_alcance.strip():
+            st.warning("Por favor ingrese algún texto borrador en el Capítulo 5 antes de pulir.")
+        else:
+            texto_pulido_5 = pulir_alcance(st.session_state.text_alcance)
+            st.session_state.text_alcance = texto_pulido_5
+            st.success("¡Capítulo 5 pulido con redacción formal y estructurada!")
+            st.rerun()
 
     st.markdown("---")
     st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial IDIEM)")
 
     if st.button("⚙️ Generar 6. Actividades Extensas"):
-        if not intro.strip() and not alcance.strip():
+        if not st.session_state.text_intro.strip() and not st.session_state.text_alcance.strip():
             st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar.")
         else:
-            txt_comb = (intro + " " + alcance).lower()
+            txt_comb = (st.session_state.text_intro + " " + st.session_state.text_alcance).lower()
             client_ref = cliente if cliente else "el Cliente / Solicitante"
             
             # Verificación estricta de solicitud de visita a terreno
@@ -360,8 +482,11 @@ with tab4:
         str_duracion = f"{meses_val:.0f}" if meses_val.is_integer() else f"{meses_val}"
         monto_uf_palabras = numero_a_palabras_uf(tot_uf)
 
-        if alcance.strip():
-            oraciones = [s.strip() for s in alcance.replace("\n", ". ").split(".") if s.strip()]
+        alcance_txt = st.session_state.text_alcance
+        intro_txt = st.session_state.text_intro
+
+        if alcance_txt.strip():
+            oraciones = [s.strip() for s in alcance_txt.replace("\n", ". ").split(".") if s.strip()]
             num_oraciones = max(1, int(len(oraciones) * 0.20))
             resumen_alcance_20 = ". ".join(oraciones[:num_oraciones]) + "."
         else:
@@ -384,8 +509,8 @@ with tab4:
                 "Etapa E: Elaboración del Informe Final IDIEM"
             ]
 
-        lista_introduccion_lineas = [l.strip() for l in intro.split("\n") if l.strip()]
-        lista_alcance_lineas = [l.strip() for l in alcance.split("\n") if l.strip()]
+        lista_introduccion_lineas = [l.strip() for l in intro_txt.split("\n") if l.strip()]
+        lista_alcance_lineas = [l.strip() for l in alcance_txt.split("\n") if l.strip()]
         lista_actividades_lineas = [l.strip() for l in actividades.split("\n") if l.strip()]
 
         lista_hitos_forma_pago = []
@@ -421,8 +546,8 @@ with tab4:
             'MONTO_UF_TOTAL': f"{tot_uf:,.0f}".replace(",", "."),
             'MONTO_UF_PALABRAS': monto_uf_palabras,
             'CONDICION_PAGO': condicion_pago,
-            'TEXTO_INTRODUCCION': intro,
-            'TEXTO_ALCANCE_DETALLADO': alcance,
+            'TEXTO_INTRODUCCION': intro_txt,
+            'TEXTO_ALCANCE_DETALLADO': alcance_txt,
             'TEXTO_ACTIVIDADES_ETAPAS': actividades,
             
             'LISTA_INTRODUCCION_LINEAS': lista_introduccion_lineas,
