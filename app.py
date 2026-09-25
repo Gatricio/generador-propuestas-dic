@@ -28,10 +28,8 @@ def pulir_introduccion(texto, cliente_val, propuesta_val):
     if not texto.strip():
         return ""
     
-    # Limpieza de espacios y saltos redundantes
     lineas = [l.strip() for l in texto.split("\n") if l.strip()]
     
-    # Correcciones ortográficas y de conectores contractuales habituales
     reemplazos = {
         r"\bcodelco\b": "CODELCO",
         r"\bmetro\b": "METRO S.A.",
@@ -52,26 +50,20 @@ def pulir_introduccion(texto, cliente_val, propuesta_val):
     for patron, reemp in reemplazos.items():
         texto_procesado = re.sub(patron, reemp, texto_procesado, flags=re.IGNORECASE)
     
-    # Encabezado formal según datos ingresados
     cliente_ref = cliente_val if cliente_val.strip() else "el Cliente"
     prop_ref = propuesta_val if propuesta_val.strip() else "el estudio técnico-contractual solicitado"
     
     parrafos_pulidos = []
-    
-    # Párrafo 1: Contextualización formal
     parrafos_pulidos.append(
         f"El presente documento corresponde a la propuesta técnica y económica desarrollada por IDIEM para {cliente_ref}, "
         f"referida al servicio denominado \"{prop_ref}\"."
     )
     
-    # Párrafos subsiguientes: Estructuración de las ideas del usuario
     for l in lineas:
-        # Asegurar mayúscula inicial y punto final
         l_corregida = l[0].upper() + l[1:] if len(l) > 1 else l.upper()
         if not l_corregida.endswith("."):
             l_corregida += "."
         
-        # Evitar duplicar el Párrafo 1 si el usuario ya había puesto algo similar
         if "propuesta técnica" not in l_corregida.lower() and "idiem" not in l_corregida.lower():
             parrafos_pulidos.append(l_corregida)
             
@@ -96,7 +88,6 @@ def pulir_alcance(texto):
     items_pulidos.append("De acuerdo con los requerimientos expresados, el alcance del presente estudio considera analizar e informar sobre los siguientes puntos específicos:")
     
     for l in lineas:
-        # Quitar viñetas previas si las puso el usuario
         l_clean = re.sub(r"^[\-\*\•\d\.\)]+\s*", "", l).strip()
         if not l_clean:
             continue
@@ -121,7 +112,7 @@ def numero_a_palabras_uf(n):
         return "cero"
 
     unidades = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"]
-    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "diecisiete", "dieciocho", "diecinueve"]
+    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "diecisiete", "diecisiete", "dieciocho", "diecinueve"]
     especiales[6] = "dieciséis"
     decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"]
     centenas = ["", "ciento", "doscientas", "trescientas", "cuatrocientas", "quinientas", "seiscientas", "setecientas", "ochocientas", "novecientas"]
@@ -249,45 +240,47 @@ with tab2:
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
 
-    # --- PUNTOS 4 Y 5 CON PULIDO DE REDACCIÓN ---
+    # --- CAPÍTULO 4: INTRODUCCIÓN ---
     st.markdown("#### 4. Introducción / Contexto de la Obra")
+    
     intro_input = st.text_area(
         "Ingrese antecedentes del contrato, obra y conflicto:", 
         value=st.session_state.text_intro, 
         placeholder="Ingrese borrador o notas del contexto...", 
-        height=140,
+        height=160,
         key="key_intro_area"
     )
     st.session_state.text_intro = intro_input
 
-    if st.button("✨ Pulir y Mejorar Redacción del Capítulo 4 (Introducción)"):
-        if not st.session_state.text_intro.strip():
-            st.warning("Por favor ingrese algún texto borrador en el Capítulo 4 antes de pulir.")
-        else:
-            texto_pulido_4 = pulir_introduccion(st.session_state.text_intro, cliente, nombre_propuesta)
-            st.session_state.text_intro = texto_pulido_4
-            st.success("¡Capítulo 4 pulido con tono técnico-contractual de IDIEM!")
-            st.rerun()
+    def aplicar_pulido_cap4():
+        if st.session_state.text_intro.strip():
+            texto_pulido = pulir_introduccion(st.session_state.text_intro, cliente, nombre_propuesta)
+            st.session_state.text_intro = texto_pulido
+            st.session_state.key_intro_area = texto_pulido
+
+    st.button("✨ Pulir y Mejorar Redacción del Capítulo 4 (Introducción)", on_click=aplicar_pulido_cap4)
 
     st.markdown("---")
+
+    # --- CAPÍTULO 5: ALCANCE DETALLADO ---
     st.markdown("#### 5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba)")
+    
     alcance_input = st.text_area(
         "Ingrese el desglose de materias, reclamaciones o Puntos de Prueba:", 
         value=st.session_state.text_alcance, 
         placeholder="Ingrese borrador o lista de puntos de prueba...", 
-        height=140,
+        height=160,
         key="key_alcance_area"
     )
     st.session_state.text_alcance = alcance_input
 
-    if st.button("✨ Pulir y Mejorar Redacción del Capítulo 5 (Alcance)"):
-        if not st.session_state.text_alcance.strip():
-            st.warning("Por favor ingrese algún texto borrador en el Capítulo 5 antes de pulir.")
-        else:
-            texto_pulido_5 = pulir_alcance(st.session_state.text_alcance)
-            st.session_state.text_alcance = texto_pulido_5
-            st.success("¡Capítulo 5 pulido con redacción formal y estructurada!")
-            st.rerun()
+    def aplicar_pulido_cap5():
+        if st.session_state.text_alcance.strip():
+            texto_pulido = pulir_alcance(st.session_state.text_alcance)
+            st.session_state.text_alcance = texto_pulido
+            st.session_state.key_alcance_area = texto_pulido
+
+    st.button("✨ Pulir y Mejorar Redacción del Capítulo 5 (Alcance)", on_click=aplicar_pulido_cap5)
 
     st.markdown("---")
     st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial IDIEM)")
@@ -309,7 +302,7 @@ with tab2:
             # --- ETAPA DE TERRENO SOLO SI FUE SOLICITADA ---
             if requiere_terreno:
                 act_blocks.append(f"Etapa {etapa_letra}: Inspección en terreno y verificación in situ")
-                act_blocks.append("Considera la realización de una visita a terreno por parte del equipo especialista de IDIEM para examinar directamente las condiciones físicas de la obra, recintos e instalaciones involucradas en el alcance. Durante la inspección se resguardará el principio de neutralidad técnica, recopilando antecedentes empíricos sin emitir juzgamientos preliminares.\n")
+                act_blocks.append("Considera la realización de una visita a terreno por parte del equipo especialista de IDIEM para examinar directamente las condiciones físicas de la obra, recintos e instalaciones involucradas en el alcance. Durante la inspección se resguardará el principio de neutralidad técnica, recopilando antecedentes empíricos sin emitir juzamientos preliminares.\n")
                 etapa_letra = chr(ord(etapa_letra) + 1)
 
             # --- ETAPA DE LÍNEA BASE Y PERTINENCIA ---
@@ -327,10 +320,10 @@ with tab2:
                 act_blocks.append("Revisión de la lógica de programación y ruta crítica en los programas oficiales (Primavera P6 / MS Project). Se insertarán los eventos validados como actividades independientes para evaluar su impacto real sobre los plazos contractuales, hitos intermedios y la eventual concurrencia de retrasos.\n")
                 etapa_letra = chr(ord(etapa_letra) + 1)
 
-            # --- ETAPA DE COSTOS Y GASTOS GENERALES ---
-            if any(k in txt_comb for k in ["costo", "gasto", "económic", "presupuesto", "adicional", "multa", "retencion", "garantia", "cuantific", "productividad", "rendimiento"]):
-                act_blocks.append(f"Etapa {etapa_letra}: Evaluación económica y cuantificación de mayores costos")
-                act_blocks.append("Determinación y cuantificación de los mayores costos directos, indirectos, Gastos Generales extra proporcionales (conforme a la oferta, DS N° 75 / RCOP o DS N° 236) o cobro de retenciones y garantías asociados a los puntos validados, sobre bases técnicas objetivas de mercado.\n")
+            # --- ETAPA DE COSTOS Y PERJUICIOS (EVALUACIÓN ECONÓMICA LIMPIA Y FIEL) ---
+            if any(k in txt_comb for k in ["costo", "gasto", "económic", "presupuesto", "adicional", "perjuicio", "daño", "cuantific", "productividad", "rendimiento"]):
+                act_blocks.append(f"Etapa {etapa_letra}: Evaluación económica y cuantificación de perjuicios / mayores costos")
+                act_blocks.append("Determinación, revisión y cuantificación económica objetiva de los mayores costos directos, indirectos o daños validados en el alcance, aplicando criterios técnicos de mercado, valores de subcontratación y/o la consideración de reajustes e intereses según lo establecido en los antecedentes del caso.\n")
                 etapa_letra = chr(ord(etapa_letra) + 1)
 
             # --- ETAPA FINAL ---
