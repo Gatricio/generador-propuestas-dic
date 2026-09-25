@@ -85,7 +85,6 @@ def limpiar_respuesta_gemini(texto):
         return ""
     lines = texto.split("\n")
     cleaned_lines = []
-    skip_mode = False
     
     palabras_prohibidas = [
         "goal:", "constraints:", "drafting", "refining", "final polish", 
@@ -96,13 +95,8 @@ def limpiar_respuesta_gemini(texto):
     
     for line in lines:
         line_lower = line.strip().lower()
-        
-        # Ignorar líneas que comiencen con comandos de razonamiento
-        if any(line_lower.startswith(p) or line_lower.endswith(p) for p in palabras_prohibidas):
+        if any(p in line_lower for p in palabras_prohibidas):
             continue
-        if any(p in line_lower for p in ["*   goal:", "*   tone:", "*   constraints:", "*   drafting", "*   refining"]):
-            continue
-            
         cleaned_lines.append(line)
         
     resultado = "\n".join(cleaned_lines).strip()
@@ -147,8 +141,7 @@ def numero_a_palabras_uf(n):
         return "cero"
 
     unidades = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"]
-    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "diecisiete", "dieciocho", "diecinueve"]
-    especiales[6] = "dieciséis"
+    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "diechocho", "diecinueve"]
     decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"]
     centenas = ["", "ciento", "doscientas", "trescientas", "cuatrocientas", "quinientas", "seiscientas", "setecientas", "ochocientas", "novecientas"]
 
