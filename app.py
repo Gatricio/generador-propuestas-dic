@@ -1,9 +1,11 @@
 import os
-import re
 import datetime
 from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
+from google import genai
+import pypdf
+import docx
 
 # Configuración inicial de Streamlit
 st.set_page_config(
@@ -22,86 +24,70 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# FUNCIONES DE MEJORA Y PULIDO DE REDACCIÓN (CAPS 4 Y 5)
+# INICIALIZACIÓN CLIENTE GEMINI API
 # ---------------------------------------------------------
-def pulir_introduccion(texto, cliente_val, propuesta_val):
-    if not texto.strip():
-        return ""
-    
-    lineas = [l.strip() for l in texto.split("\n") if l.strip()]
-    
-    reemplazos = {
-        r"\bcodelco\b": "CODELCO",
-        r"\bmetro\b": "METRO S.A.",
-        r"\bminvu\b": "MINVU",
-        r"\bmop\b": "MOP",
-        r"\bcam\b": "CAM Santiago",
-        r"\bito\b": "ITO",
-        r"\brdi\b": "RDI",
-        r"\brcop\b": "RCOP",
-        r"\bee.tt\b": "EETT",
-        r"\beett\b": "EETT",
-        r"\ba causa de\b": "en razón de",
-        r"\bpor culpa de\b": "derivado de la situación ocurrida en",
-        r"\batraso\b": "desviación en los plazos de ejecución",
-    }
-    
-    texto_procesado = "\n".join(lineas)
-    for patron, reemp in reemplazos.items():
-        texto_procesado = re.sub(patron, reemp, texto_procesado, flags=re.IGNORECASE)
-    
-    cliente_ref = cliente_val if cliente_val.strip() else "el Cliente"
-    prop_ref = propuesta_val if propuesta_val.strip() else "el estudio técnico-contractual solicitado"
-    
-    parrafos_pulidos = []
-    parrafos_pulidos.append(
-        f"El presente documento corresponde a la propuesta técnica y económica desarrollada por IDIEM para {cliente_ref}, "
-        f"referida al servicio denominado \"{prop_ref}\"."
-    )
-    
-    for l in lineas:
-        l_corregida = l[0].upper() + l[1:] if len(l) > 1 else l.upper()
-        if not l_corregida.endswith("."):
-            l_corregida += "."
-        
-        if "propuesta técnica" not in l_corregida.lower() and "idiem" not in l_corregida.lower():
-            parrafos_pulidos.append(l_corregida)
-            
-    return "\n\n".join(parrafos_pulidos)
+@st.cache_resource
+def get_gemini_client():
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return None
+    return genai.Client(api_key=api_key)
 
+client = get_gemini_client()
 
-def pulir_alcance(texto):
-    if not texto.strip():
-        return ""
-    
-    lineas = [l.strip() for l in texto.split("\n") if l.strip()]
-    
-    reemplazos = {
-        r"\bver\b": "Evaluar y analizar",
-        r"\brevisar\b": "Analizar la pertinencia técnico-contractual de",
-        r"\bcalcular\b": "Cuantificar económicamente",
-        r"\bver si\b": "Determinar si",
-        r"\bcobrar\b": "Valorizar",
-    }
-    
-    items_pulidos = []
-    items_pulidos.append("De acuerdo con los requerimientos expresados, el alcance del presente estudio considera analizar e informar sobre los siguientes puntos específicos:")
-    
-    for l in lineas:
-        l_clean = re.sub(r"^[\-\*\•\d\.\)]+\s*", "", l).strip()
-        if not l_clean:
-            continue
-            
-        for patron, reemp in reemplazos.items():
-            l_clean = re.sub(patron, reemp, l_clean, flags=re.IGNORECASE)
-            
-        l_clean = l_clean[0].upper() + l_clean[1:] if len(l_clean) > 1 else l_clean.upper()
-        if not l_clean.endswith("."):
-            l_clean += "."
-            
-        items_pulidos.append(f"• {l_clean}")
-        
-    return "\n".join(items_pulidos)
+# ---------------------------------------------------------
+# FUNCIONES PARA EXTRACCIÓN DE TEXTO DE ARCHIVOS
+# ---------------------------------------------------------
+def extraer_texto_pdf(file_bytes):
+    try:
+        pdf_reader = pypdf.PdfReader(BytesIO(file_bytes))
+        texto = ""
+        for page in pdf_reader.pages:
+            texto += page.extract_text() or ""
+        return texto
+    except Exception as e:
+        return f"[Error al leer PDF: {str(e)}]"
+
+def extraer_texto_docx(file_bytes):
+    try:
+        doc = docx.Document(BytesIO(file_bytes))
+        texto = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+        return texto
+    except Exception as e:
+        return f"[Error al leer DOCX: {str(e)}]"
+
+# ---------------------------------------------------------
+# PROMPT DEL SISTEMA: GUARDARRAÍLES Y TONO PERICIAL IDIEM
+# ---------------------------------------------------------
+SYSTEM_GUARDRAILS_IDIEM = """
+Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
+Tu objetivo es redactar propuestas técnicas e informes periciales con el máximo rigor de ingeniería, neutralidad y objetividad.
+
+REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
+1. ANCLAJE ESTRICTO A LOS ANTECEDENTES: Utiliza EXCLUSIVAMENTE la información proporcionada en los textos y archivos subidos. NO inventes hechos, NO asumas datos no documentados y NO agregues información externa o web.
+2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial.
+   - PROHIBIDO usar adjetivos o calificativos acusatorios o jurídicos (ej: "incumplimiento grave", "actitud negligente", "pretensión infundada", "culpabilidad", "parábolas").
+   - SUSTITUYE por descripciones objetivas de ingeniería (ej: "desviación respecto de la línea base", "modificación de la secuencia constructiva", "evento registrado en Libro de Obras N° X").
+3. ENFOQUE DIRECTO A LAS NECESIDADES DEL CLIENTE: Identifica con precisión las solicitudes específicas expresadas en las demandas, correos o antecedentes cargados.
+4. ESTÁNDAR IDIEM: Toda cuantificación debe fundamentarse en datos comprobables, análisis de ruta crítica (Delay Analysis), valores de subcontrato o precios de mercado, sin juicios de valor.
+"""
+
+def llamar_ia_gemini(prompt_tarea, contexto_usuario):
+    if not client:
+        return "⚠️ Error: No se ha configurado la variable de entorno GEMINI_API_KEY en el servidor."
+    try:
+        prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt_completo,
+            config={
+                'temperature': 0.3,  # Temperatura baja para máxima fidelidad y cero alucinaciones
+                'max_output_tokens': 4000,
+            }
+        )
+        return response.text.strip()
+    except Exception as e:
+        return f"⚠️ Error al conectar con Gemini API: {str(e)}"
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
@@ -112,7 +98,7 @@ def numero_a_palabras_uf(n):
         return "cero"
 
     unidades = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"]
-    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "diecisiete", "diecisiete", "dieciocho", "diecinueve"]
+    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "diecisiete", "dieciocho", "diecinueve"]
     especiales[6] = "dieciséis"
     decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"]
     centenas = ["", "ciento", "doscientas", "trescientas", "cuatrocientas", "quinientas", "seiscientas", "setecientas", "ochocientas", "novecientas"]
@@ -228,10 +214,10 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta / Peritaje:", value="", placeholder="Ej: INFORME TÉCNICO DE PERTINENCIA, IMPACTO EN PLAZO Y EVALUACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO
+# PESTAÑA 2: ALCANCE Y CONTEXTO (CON CARGA DE ARCHIVOS)
 # ---------------------------------------------------------
 with tab2:
-    st.subheader("Descripción del Conflicto y Propuesta Técnica")
+    st.subheader("Descripción del Conflicto y Carga de Antecedentes")
     
     if "text_intro" not in st.session_state:
         st.session_state.text_intro = ""
@@ -239,6 +225,31 @@ with tab2:
         st.session_state.text_alcance = ""
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
+    if "texto_adjuntos" not in st.session_state:
+        st.session_state.texto_adjuntos = ""
+
+    # --- MÓDULO DE CARGA DE ARCHIVOS ---
+    st.markdown("#### 📁 Cargar Documentos de Respaldo (Opcional)")
+    st.caption("Puedes subir la demanda, descripción de la obra, laudos o correos del cliente en formato PDF o DOCX para que el sistema adapte la propuesta directamente a las necesidades del caso.")
+    
+    uploaded_files = st.file_uploader("Seleccione archivos (.pdf, .docx):", type=["pdf", "docx"], accept_multiple_files=True)
+    
+    if uploaded_files:
+        texto_extraido_total = []
+        for file in uploaded_files:
+            bytes_data = file.read()
+            if file.name.endswith(".pdf"):
+                txt = extraer_texto_pdf(bytes_data)
+            elif file.name.endswith(".docx"):
+                txt = extraer_texto_docx(bytes_data)
+            else:
+                txt = ""
+            texto_extraido_total.append(f"--- DOCUMENTO: {file.name} ---\n{txt}\n")
+        
+        st.session_state.texto_adjuntos = "\n".join(texto_extraido_total)
+        st.success(f"¡Se han procesado {len(uploaded_files)} archivo(s) correctamente!")
+
+    st.markdown("---")
 
     # --- CAPÍTULO 4: INTRODUCCIÓN ---
     st.markdown("#### 4. Introducción / Contexto de la Obra")
@@ -253,10 +264,14 @@ with tab2:
     st.session_state.text_intro = intro_input
 
     def aplicar_pulido_cap4():
-        if st.session_state.text_intro.strip():
-            texto_pulido = pulir_introduccion(st.session_state.text_intro, cliente, nombre_propuesta)
-            st.session_state.text_intro = texto_pulido
-            st.session_state.key_intro_area = texto_pulido
+        contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nTEXTO CAPÍTULO 4:\n{st.session_state.text_intro}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
+        prompt_tarea = "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' estructurado en párrafos ejecutivos claros, objetivos y formales. Mantiene la neutralidad e imparcialidad pericial de IDIEM."
+        
+        if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
+            with st.spinner("✨ Puliendo Capítulo 4 con Gemini IA y Guardarraíles IDIEM..."):
+                texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
+                st.session_state.text_intro = texto_pulido
+                st.session_state.key_intro_area = texto_pulido
 
     st.button("✨ Pulir y Mejorar Redacción del Capítulo 4 (Introducción)", on_click=aplicar_pulido_cap4)
 
@@ -275,63 +290,34 @@ with tab2:
     st.session_state.text_alcance = alcance_input
 
     def aplicar_pulido_cap5():
-        if st.session_state.text_alcance.strip():
-            texto_pulido = pulir_alcance(st.session_state.text_alcance)
-            st.session_state.text_alcance = texto_pulido
-            st.session_state.key_alcance_area = texto_pulido
+        contexto_combinado = f"TEXTO CAPÍTULO 5:\n{st.session_state.text_alcance}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
+        prompt_tarea = "Redacta el Capítulo 5 'Alcance Detallado' formalizando los puntos específicos a evaluar mediante viñetas ('•') con verbos en infinitivo. Separa formalmente las exclusiones si las hubiere. Mantiene la estricta neutralidad de IDIEM."
+        
+        if st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
+            with st.spinner("✨ Puliendo Capítulo 5 con Gemini IA y Guardarraíles IDIEM..."):
+                texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
+                st.session_state.text_alcance = texto_pulido
+                st.session_state.key_alcance_area = texto_pulido
 
     st.button("✨ Pulir y Mejorar Redacción del Capítulo 5 (Alcance)", on_click=aplicar_pulido_cap5)
 
     st.markdown("---")
     st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial IDIEM)")
 
-    if st.button("⚙️ Generar 6. Actividades Extensas"):
-        if not st.session_state.text_intro.strip() and not st.session_state.text_alcance.strip():
-            st.warning("Por favor ingrese texto en la Introducción o en el Alcance Detallado antes de generar.")
-        else:
-            txt_comb = (st.session_state.text_intro + " " + st.session_state.text_alcance).lower()
-            client_ref = cliente if cliente else "el Cliente / Solicitante"
-            
-            # Verificación estricta de solicitud de visita a terreno
-            requiere_terreno = any(k in txt_comb for k in ["terreno", "visita", "inspección in situ", "recorrido", "recinto", "inspeccion in situ"])
+    def aplicar_generar_actividades():
+        contexto_combinado = f"CLIENTE: {cliente}\n\nINTRODUCCIÓN (CAP 4):\n{st.session_state.text_intro}\n\nALCANCE (CAP 5):\n{st.session_state.text_alcance}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
+        prompt_tarea = """
+        Redacta el Capítulo 6 'Actividades y Etapas Propuestas' estructurado en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas exactamente a los puntos del alcance.
+        - NO incluyas inspección en terreno si no se menciona expresamente.
+        - NO incluyas normativas MOP si se trata de un contrato privado salvo que se soliciten.
+        - Redacta cada actividad en párrafos independientes y con la profundidad técnica de IDIEM.
+        """
+        if st.session_state.text_intro.strip() or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
+            with st.spinner("⚙️ Generando Capítulo 6 con Gemini IA y Guardarraíles IDIEM..."):
+                actividades_gen = llamar_ia_gemini(prompt_tarea, contexto_combinado)
+                st.session_state.auto_actividades = actividades_gen
 
-            act_blocks = ["Para responder de manera integral al alcance solicitado, se contemplan las siguientes etapas y actividades de ingeniería contractual:\n"]
-            
-            etapa_letra = 'A'
-
-            # --- ETAPA DE TERRENO SOLO SI FUE SOLICITADA ---
-            if requiere_terreno:
-                act_blocks.append(f"Etapa {etapa_letra}: Inspección en terreno y verificación in situ")
-                act_blocks.append("Considera la realización de una visita a terreno por parte del equipo especialista de IDIEM para examinar directamente las condiciones físicas de la obra, recintos e instalaciones involucradas en el alcance. Durante la inspección se resguardará el principio de neutralidad técnica, recopilando antecedentes empíricos sin emitir juzamientos preliminares.\n")
-                etapa_letra = chr(ord(etapa_letra) + 1)
-
-            # --- ETAPA DE LÍNEA BASE Y PERTINENCIA ---
-            act_blocks.append(f"Etapa {etapa_letra}: Análisis de antecedentes y línea base contractual")
-            act_blocks.append(f"Considera la revisión exhaustiva de los antecedentes contractuales, de licitación y del expediente proporcionados por {client_ref} (bases de licitación, aclaraciones, contrato, programas de obra oficiales Rev0, especificaciones técnicas y ofertas) para establecer la línea base contractual y el orden de prelación aplicable a las materias en controversia.\n")
-            etapa_letra = chr(ord(etapa_letra) + 1)
-
-            act_blocks.append(f"Etapa {etapa_letra}: Análisis de pertinencia técnica y trazabilidad documental")
-            act_blocks.append("Evaluación sistemática de cada evento o punto de prueba reclamado para determinar si constituye un cambio de condición respecto de la línea base, ordenando la documentación contemporánea de la obra (libros de obra, cartas formales, RDI, informes de inspección y minutas) que permita acreditar objetivamente su origen, atribución y consecuencia.\n")
-            etapa_letra = chr(ord(etapa_letra) + 1)
-
-            # --- ETAPA DE PLAZOS (DELAY ANALYSIS) ---
-            if any(k in txt_comb for k in ["plazo", "atraso", "retraso", "ruta crítica", "programa", "cronograma", "hitos", "delay"]):
-                act_blocks.append(f"Etapa {etapa_letra}: Análisis de impacto en el programa de obras (Delay Analysis)")
-                act_blocks.append("Revisión de la lógica de programación y ruta crítica en los programas oficiales (Primavera P6 / MS Project). Se insertarán los eventos validados como actividades independientes para evaluar su impacto real sobre los plazos contractuales, hitos intermedios y la eventual concurrencia de retrasos.\n")
-                etapa_letra = chr(ord(etapa_letra) + 1)
-
-            # --- ETAPA DE COSTOS Y PERJUICIOS (EVALUACIÓN ECONÓMICA LIMPIA Y FIEL) ---
-            if any(k in txt_comb for k in ["costo", "gasto", "económic", "presupuesto", "adicional", "perjuicio", "daño", "cuantific", "productividad", "rendimiento"]):
-                act_blocks.append(f"Etapa {etapa_letra}: Evaluación económica y cuantificación de perjuicios / mayores costos")
-                act_blocks.append("Determinación, revisión y cuantificación económica objetiva de los mayores costos directos, indirectos o daños validados en el alcance, aplicando criterios técnicos de mercado, valores de subcontratación y/o la consideración de reajustes e intereses según lo establecido en los antecedentes del caso.\n")
-                etapa_letra = chr(ord(etapa_letra) + 1)
-
-            # --- ETAPA FINAL ---
-            act_blocks.append(f"Etapa {etapa_letra}: Elaboración del Informe Final IDIEM")
-            act_blocks.append("Consolidación de los análisis en un informe técnico pericial imparcial y fundado, estructurado en lenguaje de ingeniería neutral, que dé respuesta expresa a cada uno de los puntos del alcance con sus correspondientes matrices y carpetas de respaldo documental.\n")
-
-            st.session_state.auto_actividades = "\n".join(act_blocks)
-            st.success("¡Actividades generadas ajustándose estrictamente al texto introducido!")
+    st.button("⚙️ Generar 6. Actividades Extensas", on_click=aplicar_generar_actividades)
 
     st.markdown("---")
     actividades = st.text_area(
