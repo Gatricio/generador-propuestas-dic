@@ -24,11 +24,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# INICIALIZACIÓN GEMINI API (LIBRERÍA OFICIAL ESTABLE)
+# OBTENCIÓN SEGURA DE LA API KEY (ST.SECRETS Y OS.ENVIRON)
 # ---------------------------------------------------------
-api_key = os.environ.get("GEMINI_API_KEY")
+def obtener_api_key():
+    # Intenta leer desde st.secrets primero (Streamlit Cloud)
+    if "GEMINI_API_KEY" in st.secrets:
+        return st.secrets["GEMINI_API_KEY"]
+    # Fallback a variable de entorno
+    return os.environ.get("GEMINI_API_KEY", "")
+
+api_key = obtener_api_key()
+
 if api_key:
-    genai.configure(api_key=api_key)
+    genai.configure(api_key=api_key.strip())
 
 # ---------------------------------------------------------
 # FUNCIONES PARA EXTRACCIÓN DE TEXTO DE ARCHIVOS
@@ -69,13 +77,12 @@ REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     if not api_key:
-        return "⚠️ Error: No se ha configurado la clave GEMINI_API_KEY en los Secrets de Streamlit."
+        return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en la pestaña Secrets de Streamlit. Revisa la configuración de tu App."
     
-    # Lista de modelos compatibles en orden de prioridad
-    modelos_a_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-    
+    modelos_a_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp']
     prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
     
+    ultimo_error = ""
     for nombre_modelo in modelos_a_probar:
         try:
             model = genai.GenerativeModel(
@@ -88,10 +95,11 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
             response = model.generate_content(prompt_completo)
             if response and response.text:
                 return response.text.strip()
-        except Exception:
+        except Exception as e:
+            ultimo_error = str(e)
             continue
             
-    return "⚠️ Error: No se pudo conectar con los modelos de Gemini. Verifica tu API Key en los Secrets de Streamlit."
+    return f"⚠️ Error al conectar con Gemini API: {ultimo_error}"
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
