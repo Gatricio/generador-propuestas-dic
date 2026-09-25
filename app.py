@@ -3,7 +3,7 @@ import datetime
 from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
-from google import genai
+import google.generativeai as genai
 import pypdf
 import docx
 
@@ -24,16 +24,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# INICIALIZACIÓN CLIENTE GEMINI API
+# INICIALIZACIÓN GEMINI API (LIBRERÍA OFICIAL ESTABLE)
 # ---------------------------------------------------------
-@st.cache_resource
-def get_gemini_client():
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        return None
-    return genai.Client(api_key=api_key)
-
-client = get_gemini_client()
+api_key = os.environ.get("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
 
 # ---------------------------------------------------------
 # FUNCIONES PARA EXTRACCIÓN DE TEXTO DE ARCHIVOS
@@ -73,23 +68,30 @@ REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
 """
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
-    if not client:
-        return "⚠️ Error: No se ha configurado la variable de entorno GEMINI_API_KEY en los Secrets de Streamlit."
-    try:
-        prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
-        
-        # Modelo oficial universal soportado por Google Gen AI API
-        response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=prompt_completo,
-            config={
-                'temperature': 0.3,
-                'max_output_tokens': 4000,
-            }
-        )
-        return response.text.strip()
-    except Exception as e:
-        return f"⚠️ Error al conectar con Gemini API: {str(e)}"
+    if not api_key:
+        return "⚠️ Error: No se ha configurado la clave GEMINI_API_KEY en los Secrets de Streamlit."
+    
+    # Lista de modelos compatibles en orden de prioridad
+    modelos_a_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    
+    prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
+    
+    for nombre_modelo in modelos_a_probar:
+        try:
+            model = genai.GenerativeModel(
+                model_name=nombre_modelo,
+                generation_config={
+                    'temperature': 0.3,
+                    'max_output_tokens': 4000,
+                }
+            )
+            response = model.generate_content(prompt_completo)
+            if response and response.text:
+                return response.text.strip()
+        except Exception:
+            continue
+            
+    return "⚠️ Error: No se pudo conectar con los modelos de Gemini. Verifica tu API Key en los Secrets de Streamlit."
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
