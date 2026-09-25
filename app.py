@@ -78,8 +78,9 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     try:
         prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
         
+        # Modelo oficial universal soportado por Google Gen AI API
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-1.5-flash',
             contents=prompt_completo,
             config={
                 'temperature': 0.3,
