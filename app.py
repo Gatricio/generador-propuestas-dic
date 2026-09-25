@@ -3,7 +3,7 @@ import datetime
 from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
-import google.generativeai as genai
+from google import genai  # <-- NUEVA LIBRERÍA
 
 # Configuración inicial de Streamlit
 st.set_page_config(
@@ -22,12 +22,18 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# OBTENCIÓN DE LA API KEY (STREAMLIT SECRETS)
+# OBTENCIÓN DE LA API KEY Y CONFIGURACIÓN DEL CLIENTE
 # ---------------------------------------------------------
 api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 
+# Configuramos un cliente global de la nueva librería
+client = None
 if api_key:
-    genai.configure(api_key=api_key.strip())
+    try:
+        # El nuevo cliente se inicializa pasando la api_key
+        client = genai.Client(api_key=api_key.strip())
+    except Exception as e:
+        st.error(f"Error al configurar el cliente de Gemini: {e}")
 
 # ---------------------------------------------------------
 # PROMPT DEL SISTEMA Y LLAMADA A GEMINI
@@ -42,41 +48,9 @@ REGLAS DE ORO:
 3. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. No entregues notas de trabajo, razonamientos ni textos en inglés.
 """
 
-
-@st.cache_data(ttl=3600, show_spinner=False)
-def _obtener_mejor_modelo():
-    """Consulta la API y devuelve el mejor modelo disponible (prefiere flash 2.5 > 2.0 > pro)."""
-    try:
-        disponibles = [
-            m.name for m in genai.list_models()
-            if 'generateContent' in m.supported_generation_methods
-        ]
-    except Exception:
-        # Fallback si falla el listado
-        return "gemini-2.5-flash"
-
-    # Orden de preferencia
-    preferencias = [
-        "models/gemini-2.5-flash",
-        "models/gemini-2.0-flash",
-        "models/gemini-2.5-pro",
-        "models/gemini-2.0-flash-lite",
-    ]
-    for pref in preferencias:
-        if pref in disponibles:
-            return pref.replace("models/", "")
-
-    # Si ninguno de los preferidos está, tomar el primer flash disponible
-    for nombre in disponibles:
-        if "flash" in nombre:
-            return nombre.replace("models/", "")
-
-    return "gemini-2.5-flash"  # último recurso
-
-
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
-    if not api_key:
-        return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en los Secrets de Streamlit."
+    if not client:
+        return "⚠️ Error: No se encontró la clave GEMINI_API_KEY o el cliente no se inicializó correctamente."
 
     prompt_completo = (
         f"{SYSTEM_GUARDRAILS_IDIEM}\n\n"
@@ -84,33 +58,26 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
         f"ANTECEDENTES DEL CASO:\n{contexto_usuario}"
     )
 
-    # Modelos de respaldo por si el dinámico falla
-    modelos_a_probar = [
-        _obtener_mejor_modelo(),
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-    ]
-    # Eliminar duplicados manteniendo el orden
-    modelos_a_probar = list(dict.fromkeys(modelos_a_probar))
+    # Según el mensaje de error, el modelo recomendado es gemini-3.8-flash
+    nombre_modelo = "gemini-3.8-flash"
 
-    ultimo_error = ""
-    for nombre_modelo in modelos_a_probar:
-        try:
-            model = genai.GenerativeModel(
-                model_name=nombre_modelo,
-                generation_config={
-                    'temperature': 0.2,
-                    'max_output_tokens': 4000,
-                }
-            )
-            response = model.generate_content(prompt_completo)
-            if response and response.text:
-                return response.text.strip()
-        except Exception as e:
-            ultimo_error = str(e)
-            continue
-
-    return f"⚠️ Error al conectar con Gemini API: {ultimo_error}"
+    try:
+        # Usamos el nuevo método de 'interactions.create'
+        interaction = client.interactions.create(
+            model=nombre_modelo,
+            input=prompt_completo,
+            # Puedes añadir generation_config aquí si lo necesitas, por ejemplo:
+            # generation_config={"temperature": 0.2, "max_output_tokens": 4000}
+        )
+        
+        # La respuesta se obtiene de 'output_text'
+        if interaction and interaction.output_text:
+            return interaction.output_text.strip()
+        else:
+            return "⚠️ La IA no generó una respuesta."
+            
+    except Exception as e:
+        return f"⚠️ Error al conectar con Gemini API: {str(e)}"
 
 
 # ---------------------------------------------------------
@@ -173,22 +140,20 @@ def numero_a_palabras_uf(n):
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-
 def check_login():
     user = st.session_state.get("input_user", "").strip()
     pwd = st.session_state.get("input_pwd", "").strip()
-
+    
     if user == "idiem.dic" and pwd == "2343":
         st.session_state.authenticated = True
     else:
         st.session_state.authenticated = False
         st.error("Usuario o contraseña incorrectos.")
 
-
 if not st.session_state.authenticated:
     st.markdown('<div class="main-header">IDIEM — UNIVERSIDAD DE CHILE</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">División de Ingeniería Contractual | Acceso Privado</div>', unsafe_allow_html=True)
-
+    
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
         st.subheader("🔒 Iniciar Sesión")
@@ -196,7 +161,6 @@ if not st.session_state.authenticated:
         st.text_input("Contraseña:", type="password", key="input_pwd")
         st.button("Ingresar", on_click=check_login)
     st.stop()
-
 
 # ---------------------------------------------------------
 # APLICACIÓN PRINCIPAL
@@ -211,8 +175,8 @@ with col_logout:
         st.rerun()
 
 tab1, tab2, tab3, tab4 = st.tabs([
-    "1. Identificación y Tipo",
-    "2. Alcance y Contexto",
+    "1. Identificación y Tipo", 
+    "2. Alcance y Contexto", 
     "3. Horas Hombre y Perfiles",
     "4. Oferta Económica, Exclusiones y Descarga"
 ])
@@ -223,7 +187,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.subheader("Clasificación del Encargo")
     tipo_encargo = st.radio("Tipo de Servicio:", ["Informe Técnico de Parte (Cliente Directo)", "Peritaje Judicial / Arbitral CAM (Designación por Tribunal)"])
-
+    
     col1, col2 = st.columns(2)
     with col1:
         codigo = st.text_input("Código de Propuesta:", value="", placeholder="Ingrese código PR.DIC...")
@@ -237,7 +201,7 @@ with tab1:
         email_solicitante = st.text_input("Email Solicitante:", value="", placeholder="correo@ejemplo.cl")
         telefono_solicitante = st.text_input("Teléfono Solicitante:", value="", placeholder="+56 9 ...")
         rol_cam = st.text_input("Tribunal / Rol Arbitral CAM (Si aplica):", value="", placeholder="Rol CAM N°...")
-
+    
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta / Peritaje:", value="", placeholder="Ej: INFORME TÉCNICO DE PERTINENCIA, IMPACTO EN PLAZO Y EVALUACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
@@ -245,7 +209,7 @@ with tab1:
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Antecedentes")
-
+    
     if "text_intro" not in st.session_state:
         st.session_state.text_intro = ""
     if "text_alcance" not in st.session_state:
@@ -255,11 +219,11 @@ with tab2:
 
     # --- CAPÍTULO 4: INTRODUCCIÓN ---
     st.markdown("#### 4. Introducción / Contexto de la Obra")
-
+    
     intro_input = st.text_area(
-        "Ingrese antecedentes del contrato, obra y conflicto:",
-        value=st.session_state.text_intro,
-        placeholder="Ingrese borrador o notas del contexto...",
+        "Ingrese antecedentes del contrato, obra y conflicto:", 
+        value=st.session_state.text_intro, 
+        placeholder="Ingrese borrador o notas del contexto...", 
         height=160,
         key="key_intro_area"
     )
@@ -268,7 +232,7 @@ with tab2:
     def aplicar_pulido_cap4():
         contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nTEXTO CAPÍTULO 4:\n{st.session_state.text_intro}"
         prompt_tarea = "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' en párrafos ejecutivos formales en español."
-
+        
         if st.session_state.text_intro.strip():
             with st.spinner("✨ Puliendo Capítulo 4..."):
                 texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
@@ -281,11 +245,11 @@ with tab2:
 
     # --- CAPÍTULO 5: ALCANCE DETALLADO ---
     st.markdown("#### 5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba)")
-
+    
     alcance_input = st.text_area(
-        "Ingrese el desglose de materias, reclamaciones o Puntos de Prueba:",
-        value=st.session_state.text_alcance,
-        placeholder="Ingrese borrador o lista de puntos de prueba...",
+        "Ingrese el desglose de materias, reclamaciones o Puntos de Prueba:", 
+        value=st.session_state.text_alcance, 
+        placeholder="Ingrese borrador o lista de puntos de prueba...", 
         height=160,
         key="key_alcance_area"
     )
@@ -294,7 +258,7 @@ with tab2:
     def aplicar_pulido_cap5():
         contexto_combinado = f"TEXTO CAPÍTULO 5:\n{st.session_state.text_alcance}"
         prompt_tarea = "Redacta el Capítulo 5 'Alcance Detallado' en español mediante viñetas ('•') con verbos en infinitivo."
-
+        
         if st.session_state.text_alcance.strip():
             with st.spinner("✨ Puliendo Capítulo 5..."):
                 texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
@@ -309,7 +273,7 @@ with tab2:
     def aplicar_generar_actividades():
         contexto_combinado = f"CLIENTE: {cliente}\n\nINTRODUCCIÓN (CAP 4):\n{st.session_state.text_intro}\n\nALCANCE (CAP 5):\n{st.session_state.text_alcance}"
         prompt_tarea = "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' estructurado en Etapas secuenciales (Etapa A, Etapa B, etc.)."
-
+        
         if st.session_state.text_intro.strip() or st.session_state.text_alcance.strip():
             with st.spinner("⚙️ Generando Capítulo 6..."):
                 actividades_gen = llamar_ia_gemini(prompt_tarea, contexto_combinado)
@@ -319,8 +283,8 @@ with tab2:
 
     st.markdown("---")
     actividades = st.text_area(
-        "6. Actividades / Etapas Propuestas (Output Generado):",
-        value=st.session_state.auto_actividades,
+        "6. Actividades / Etapas Propuestas (Output Generado):", 
+        value=st.session_state.auto_actividades, 
         height=280
     )
 
@@ -330,7 +294,7 @@ with tab2:
 with tab3:
     st.subheader("Estimación de Recursos y Perfiles Profesionales")
     meses_val = st.number_input("Plazo Total del Estudio (Meses):", min_value=0.5, step=0.5, value=1.0)
-
+    
     col_hdr1, col_hdr2, col_hdr3 = st.columns([2, 1, 1])
     with col_hdr1: st.markdown("**Categoría Profesional**")
     with col_hdr2: st.markdown("**HH / Mes**")
@@ -375,15 +339,15 @@ with tab3:
 
     tot_hh = (hh_asesor + hh_jefe + hh_an1 + hh_an2 + hh_an3 + hh_an4 + hh_an5) * meses_val
     tot_uf = (
-        hh_asesor * tar_asesor +
-        hh_jefe * tar_jefe +
-        hh_an1 * tar_an1 +
-        hh_an2 * tar_an2 +
-        hh_an3 * tar_an3 +
-        hh_an4 * tar_an4 +
+        hh_asesor * tar_asesor + 
+        hh_jefe * tar_jefe + 
+        hh_an1 * tar_an1 + 
+        hh_an2 * tar_an2 + 
+        hh_an3 * tar_an3 + 
+        hh_an4 * tar_an4 + 
         hh_an5 * tar_an5
     ) * meses_val
-
+    
     st.markdown("---")
     st.info(f"**Total Horas Hombre:** {tot_hh:.0f} HH  |  **Monto Total Calculado:** UF {tot_uf:.1f}.-")
 
@@ -392,7 +356,7 @@ with tab3:
 # ---------------------------------------------------------
 with tab4:
     st.subheader("Condiciones Comerciales y Exclusiones")
-
+    
     st.markdown("#### 11. Exclusiones del Servicio (4 Espacios Editables)")
     excl1 = st.text_input("Exclusión 1:", value="Visitas a terreno adicionales no contempladas expresamente en la propuesta.")
     excl2 = st.text_input("Exclusión 2:", value="Analizar materias o puntos de prueba no incluidos en el alcance o resolución pericial acordada.")
@@ -401,7 +365,7 @@ with tab4:
 
     st.markdown("---")
     st.markdown("#### 13. Estructura de Pagos (5 Hitos Personalizables)")
-
+    
     col_t1, col_p1 = st.columns([3, 1])
     with col_t1: titulo_h1 = st.text_input("Título Hito 1:", value="al momento de aceptar la presente propuesta.")
     with col_p1: pct_h1 = st.number_input("% Hito 1:", min_value=0, max_value=100, value=30)
@@ -429,7 +393,7 @@ with tab4:
         st.success("Estructura de pagos válida (Suma 100%).")
 
     condicion_pago = st.text_input("Condición de Pago (Días):", value="30 días desde fecha de emisión de factura.")
-
+    
     regimen_iva = st.selectbox("Régimen de Impuestos / IVA:", [
         "Exento de IVA (Ley N° 21.094 sobre Universidades Estatales)",
         "Afecto a IVA (Recargo del 19% según Ley N° 21.420)"
@@ -443,13 +407,13 @@ with tab4:
     def generar_documento_word():
         base_dir = os.path.dirname(os.path.abspath(__file__))
         template_path = os.path.join(base_dir, "Plantilla_Oficial_IDIEM.docx")
-
+        
         if not os.path.exists(template_path):
             st.error(f"❌ No se encontró la plantilla en la ruta: {template_path}. Por favor sube 'Plantilla_Oficial_IDIEM.docx' a GitHub.")
             st.stop()
 
         doc = DocxTemplate(template_path)
-
+        
         lista_excl = []
         if excl1.strip(): lista_excl.append(excl1.strip())
         if excl2.strip(): lista_excl.append(excl2.strip())
@@ -476,7 +440,7 @@ with tab4:
                 line_str = line.strip()
                 if line_str.startswith("Etapa "):
                     lista_items_propuesta.append(line_str)
-
+        
         if not lista_items_propuesta:
             lista_items_propuesta = [
                 "Etapa A: Análisis de antecedentes y línea base contractual",
@@ -526,59 +490,51 @@ with tab4:
             'TEXTO_INTRODUCCION': intro_txt,
             'TEXTO_ALCANCE_DETALLADO': alcance_txt,
             'TEXTO_ACTIVIDADES_ETAPAS': actividades,
-
+            
             'LISTA_INTRODUCCION_LINEAS': lista_introduccion_lineas,
             'LISTA_ALCANCE_LINEAS': lista_alcance_lineas,
             'LISTA_ACTIVIDADES_LINEAS': lista_actividades_lineas,
-
+            
             'LISTA_EXCLUSIONES': lista_excl,
             'NOTA_IMPUESTOS_IVA': regimen_iva,
-
-            'HH_ASESOR': hh_asesor,
-            'TAR_ASESOR': f"{tar_asesor:.1f}".replace(".", ","),
-            'TOT_HH_ASESOR': int(hh_asesor * meses_val),
+            
+            'HH_ASESOR': hh_asesor, 
+            'TAR_ASESOR': f"{tar_asesor:.1f}".replace(".", ","), 
+            'TOT_HH_ASESOR': int(hh_asesor * meses_val), 
             'TOT_UF_ASESOR': f"{int(hh_asesor * tar_asesor * meses_val):,.0f}".replace(",", "."),
 
-            'HH_JEFE': hh_jefe,
-            'TAR_JEFE': f"{tar_jefe:.1f}".replace(".", ","),
-            'TOT_HH_JEFE': int(hh_jefe * meses_val),
+            'HH_JEFE': hh_jefe, 
+            'TAR_JEFE': f"{tar_jefe:.1f}".replace(".", ","), 
+            'TOT_HH_JEFE': int(hh_jefe * meses_val), 
             'TOT_UF_JEFE': f"{int(hh_jefe * tar_jefe * meses_val):,.0f}".replace(",", "."),
 
-            'HH_AN1': hh_an1,
-            'TAR_AN1': f"{tar_an1:.1f}".replace(".", ","),
-            'TOT_HH_AN1': int(hh_an1 * meses_val),
+            'HH_AN1': hh_an1, 
+            'TAR_AN1': f"{tar_an1:.1f}".replace(".", ","), 
+            'TOT_HH_AN1': int(hh_an1 * meses_val), 
             'TOT_UF_AN1': f"{int(hh_an1 * tar_an1 * meses_val):,.0f}".replace(",", "."),
 
-            'HH_AN2': hh_an2,
-            'TAR_AN2': f"{tar_an2:.1f}".replace(".", ","),
-            'TOT_HH_AN2': int(hh_an2 * meses_val),
+            'HH_AN2': hh_an2, 
+            'TAR_AN2': f"{tar_an2:.1f}".replace(".", ","), 
+            'TOT_HH_AN2': int(hh_an2 * meses_val), 
             'TOT_UF_AN2': f"{int(hh_an2 * tar_an2 * meses_val):,.0f}".replace(",", "."),
 
-            'HH_AN3': hh_an3,
-            'TAR_AN3': f"{tar_an3:.1f}".replace(".", ","),
-            'TOT_HH_AN3': int(hh_an3 * meses_val),
+            'HH_AN3': hh_an3, 
+            'TAR_AN3': f"{tar_an3:.1f}".replace(".", ","), 
+            'TOT_HH_AN3': int(hh_an3 * meses_val), 
             'TOT_UF_AN3': f"{int(hh_an3 * tar_an3 * meses_val):,.0f}".replace(",", "."),
 
-            'HH_AN4': hh_an4,
-            'TAR_AN4': f"{tar_an4:.1f}".replace(".", ","),
-            'TOT_HH_AN4': int(hh_an4 * meses_val),
+            'HH_AN4': hh_an4, 
+            'TAR_AN4': f"{tar_an4:.1f}".replace(".", ","), 
+            'TOT_HH_AN4': int(hh_an4 * meses_val), 
             'TOT_UF_AN4': f"{int(hh_an4 * tar_an4 * meses_val):,.0f}".replace(",", "."),
 
-            'HH_AN5': hh_an5,
-            'TAR_AN5': f"{tar_an5:.1f}".replace(".", ","),
-            'TOT_HH_AN5': int(hh_an5 * meses_val),
+            'HH_AN5': hh_an5, 
+            'TAR_AN5': f"{tar_an5:.1f}".replace(".", ","), 
+            'TOT_HH_AN5': int(hh_an5 * meses_val), 
             'TOT_UF_AN5': f"{int(hh_an5 * tar_an5 * meses_val):,.0f}".replace(",", "."),
 
             'TOT_HH_GENERAL': int(tot_hh),
-
+            
             'TIT_H1': titulo_h1, 'PCT_H1': pct_h1, 'UF_H1': f"{int(tot_uf * (pct_h1/100)):,.0f}".replace(",", "."),
             'TIT_H2': titulo_h2, 'PCT_H2': pct_h2, 'UF_H2': f"{int(tot_uf * (pct_h2/100)):,.0f}".replace(",", "."),
-            'TIT_H3': titulo_h3, 'PCT_H3': pct_h3, 'UF_H3': f"{int(tot_uf * (pct_h3/100)):,.0f}".replace(",", "."),
-            'TIT_H4': titulo_h4, 'PCT_H4': pct_h4, 'UF_H4': f"{int(tot_uf * (pct_h4/100)):,.0f}".replace(",", "."),
-            'TIT_H5': titulo_h5, 'PCT_H5': pct_h5, 'UF_H5': f"{int(tot_uf * (pct_h5/100)):,.0f}".replace(",", "."),
-        }
-
-        doc.render(contexto)
-
-        buffer = BytesIO()
-        doc.save(buffer)
+            'TIT_H3': titulo
