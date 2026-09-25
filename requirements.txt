@@ -1,5 +1,1 @@
-streamlit
-docxtpl
-google-generativeai
-pypdf
-python-docx
+pip install -U google-genai
