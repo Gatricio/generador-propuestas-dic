@@ -64,7 +64,7 @@ Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de ID
 Tu objetivo es redactar propuestas técnicas e informes periciales con el máximo rigor de ingeniería, neutralidad y objetividad.
 
 REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
-1. ANCLAJE ESTRICTO A LOS ANTECEDENTES: Utiliza EXCLUSIVAMENTE la información proporcionada en los textos y archivos subidos. NO inventes hechos, NO asumas datos no documentados y NO agregues información externa o web.
+1. ANCLAJE ESTRICTO A LOS ANTECEDENTES: Utiliza EXCLUSIVAMENTE la información proporcionada en los textos y archivos subidos. NO inventes hechos, NO asumas datos no documentados y NO agregues información externa o de la web.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial.
    - PROHIBIDO usar adjetivos o calificativos acusatorios o jurídicos (ej: "incumplimiento grave", "actitud negligente", "pretensión infundada", "culpabilidad", "parábolas").
    - SUSTITUYE por descripciones objetivas de ingeniería (ej: "desviación respecto de la línea base", "modificación de la secuencia constructiva", "evento registrado en Libro de Obras N° X").
@@ -74,14 +74,15 @@ REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     if not client:
-        return "⚠️ Error: No se ha configurado la variable de entorno GEMINI_API_KEY en el servidor."
+        return "⚠️ Error: No se ha configurado la variable de entorno GEMINI_API_KEY en los Secrets de Streamlit."
     try:
         prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
+        
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-2.0-flash',
             contents=prompt_completo,
             config={
-                'temperature': 0.3,  # Temperatura baja para máxima fidelidad y cero alucinaciones
+                'temperature': 0.3,
                 'max_output_tokens': 4000,
             }
         )
