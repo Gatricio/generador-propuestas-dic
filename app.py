@@ -39,7 +39,7 @@ Tu objetivo es redactar propuestas técnicas e informes periciales con el máxim
 REGLAS DE ORO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES: Utiliza EXCLUSIVAMENTE la información proporcionada. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales.
-3. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. No entregues notas de trabajo ni textos en inglés.
+3. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. No entregues notas de trabajo, razonamientos ni textos en inglés.
 """
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
@@ -48,19 +48,27 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     
     prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
     
-    try:
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            generation_config={
-                'temperature': 0.2,
-                'max_output_tokens': 4000,
-            }
-        )
-        response = model.generate_content(prompt_completo)
-        if response and response.text:
-            return response.text.strip()
-    except Exception as e:
-        return f"⚠️ Error al conectar con Gemini API: {str(e)}"
+    # Lista de nombres de modelos con alias 'latest' aceptados en la API v1beta
+    modelos_a_probar = ["gemini-1.5-flash-latest", "gemini-1.5-pro-latest", "gemini-1.5-flash"]
+    
+    ultimo_error = ""
+    for nombre_modelo in modelos_a_probar:
+        try:
+            model = genai.GenerativeModel(
+                model_name=nombre_modelo,
+                generation_config={
+                    'temperature': 0.2,
+                    'max_output_tokens': 4000,
+                }
+            )
+            response = model.generate_content(prompt_completo)
+            if response and response.text:
+                return response.text.strip()
+        except Exception as e:
+            ultimo_error = str(e)
+            continue
+
+    return f"⚠️ Error al conectar con Gemini API: {ultimo_error}"
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
