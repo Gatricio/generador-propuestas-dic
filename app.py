@@ -71,13 +71,19 @@ REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
    - SUSTITUYE por descripciones objetivas de ingeniería (ej: "desviación respecto de la línea base", "modificación de la secuencia constructiva", "evento registrado en Libro de Obras N° X").
 3. ENFOQUE DIRECTO A LAS NECESIDADES DEL CLIENTE: Identifica con precisión las solicitudes específicas expresadas en las demandas, correos o antecedentes cargados.
 4. ESTÁNDAR IDIEM: Toda cuantificación debe fundamentarse en datos comprobables, análisis de ruta crítica (Delay Analysis), valores de subcontrato o precios de mercado, sin juicios de valor.
+5. FORMATO DE SALIDA ESTRICTO: NO incluyas razonamientos internos, notas en inglés, borradores de trabajo ni análisis intermedios. Entrega ÚNICAMENTE el texto final redactado en español formal corporativo.
 """
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     if not api_key:
         return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en los Secrets de Streamlit. Revisa la configuración de tu App."
     
-    prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
+    prompt_completo = (
+        f"{SYSTEM_GUARDRAILS_IDIEM}\n\n"
+        f"TAREA:\n{prompt_tarea}\n\n"
+        f"ANTECEDENTES DEL CASO:\n{contexto_usuario}\n\n"
+        "INSTRUCCIÓN FINAL IMPORTANTE: Responde ÚNICAMENTE con el texto final pulido y profesional en español. NO agregues notas, borradores ni explicaciones en inglés."
+    )
     
     # 1. Obtener modelos disponibles dinámicamente desde la cuenta de Google
     modelos_disponibles = []
@@ -100,13 +106,18 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
             model = genai.GenerativeModel(
                 model_name=nombre_modelo,
                 generation_config={
-                    'temperature': 0.3,
+                    'temperature': 0.2,
                     'max_output_tokens': 4000,
                 }
             )
             response = model.generate_content(prompt_completo)
             if response and response.text:
-                return response.text.strip()
+                res_clean = response.text.strip()
+                # Elimina encabezados sobrantes si el modelo los incluyó
+                if "Drafting" in res_clean or "Senior Expert Engineer" in res_clean:
+                    lines = res_clean.split("\n")
+                    res_clean = "\n".join([l for l in lines if not l.startswith("Drafting") and not "Senior Expert Engineer" in l]).strip()
+                return res_clean
         except Exception as e:
             ultimo_error = str(e)
             continue
@@ -289,7 +300,7 @@ with tab2:
 
     def aplicar_pulido_cap4():
         contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nTEXTO CAPÍTULO 4:\n{st.session_state.text_intro}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' estructurado en párrafos ejecutivos claros, objetivos y formales. Mantiene la neutralidad e imparcialidad pericial de IDIEM."
+        prompt_tarea = "Redacta en español el Capítulo 4 'Introducción / Contexto de la Obra' estructurado en párrafos ejecutivos claros, objetivos y formales. Mantiene la neutralidad e imparcialidad pericial de IDIEM."
         
         if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("✨ Puliendo Capítulo 4 con Gemini IA y Guardarraíles IDIEM..."):
@@ -315,7 +326,7 @@ with tab2:
 
     def aplicar_pulido_cap5():
         contexto_combinado = f"TEXTO CAPÍTULO 5:\n{st.session_state.text_alcance}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta el Capítulo 5 'Alcance Detallado' formalizando los puntos específicos a evaluar mediante viñetas ('•') con verbos en infinitivo. Separa formalmente las exclusiones si las hubiere. Mantiene la estricta neutralidad de IDIEM."
+        prompt_tarea = "Redacta en español el Capítulo 5 'Alcance Detallado' formalizando los puntos específicos a evaluar mediante viñetas ('•') con verbos en infinitivo. Mantiene la estricta neutralidad de IDIEM."
         
         if st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("✨ Puliendo Capítulo 5 con Gemini IA y Guardarraíles IDIEM..."):
