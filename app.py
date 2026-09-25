@@ -27,10 +27,8 @@ st.markdown("""
 # OBTENCIÓN SEGURA DE LA API KEY (ST.SECRETS Y OS.ENVIRON)
 # ---------------------------------------------------------
 def obtener_api_key():
-    # Intenta leer desde st.secrets primero (Streamlit Cloud)
     if "GEMINI_API_KEY" in st.secrets:
         return st.secrets["GEMINI_API_KEY"]
-    # Fallback a variable de entorno
     return os.environ.get("GEMINI_API_KEY", "")
 
 api_key = obtener_api_key()
@@ -77,13 +75,27 @@ REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     if not api_key:
-        return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en la pestaña Secrets de Streamlit. Revisa la configuración de tu App."
+        return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en los Secrets de Streamlit. Revisa la configuración de tu App."
     
-    modelos_a_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp']
     prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
     
+    # 1. Obtener modelos disponibles dinámicamente desde la cuenta de Google
+    modelos_disponibles = []
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                nombre_clean = m.name.replace("models/", "")
+                modelos_disponibles.append(nombre_clean)
+    except Exception:
+        pass
+
+    # Fallback si no se logra listar los modelos
+    if not modelos_disponibles:
+        modelos_disponibles = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+
+    # 2. Probar conectividad con el primer modelo funcional
     ultimo_error = ""
-    for nombre_modelo in modelos_a_probar:
+    for nombre_modelo in modelos_disponibles:
         try:
             model = genai.GenerativeModel(
                 model_name=nombre_modelo,
