@@ -24,14 +24,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# OBTENCIÓN SEGURA DE LA API KEY (ST.SECRETS Y OS.ENVIRON)
+# OBTENCIÓN DE LA API KEY (STREAMLIT SECRETS)
 # ---------------------------------------------------------
-def obtener_api_key():
-    if "GEMINI_API_KEY" in st.secrets:
-        return st.secrets["GEMINI_API_KEY"]
-    return os.environ.get("GEMINI_API_KEY", "")
-
-api_key = obtener_api_key()
+api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 
 if api_key:
     genai.configure(api_key=api_key.strip())
@@ -58,73 +53,37 @@ def extraer_texto_docx(file_bytes):
         return f"[Error al leer DOCX: {str(e)}]"
 
 # ---------------------------------------------------------
-# PROMPT DEL SISTEMA: GUARDARRAÍLES Y TONO PERICIAL IDIEM
+# PROMPT DEL SISTEMA Y LLAMADA A GEMINI
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
 Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
 Tu objetivo es redactar propuestas técnicas e informes periciales con el máximo rigor de ingeniería, neutralidad y objetividad.
 
-REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
-1. ANCLAJE ESTRICTO A LOS ANTECEDENTES: Utiliza EXCLUSIVAMENTE la información proporcionada en los textos y archivos subidos. NO inventes hechos, NO asumas datos no documentados y NO agregues información externa o de la web.
-2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial.
-   - PROHIBIDO usar adjetivos o calificativos acusatorios o jurídicos (ej: "incumplimiento grave", "actitud negligente", "pretensión infundada", "culpabilidad", "parábolas").
-   - SUSTITUYE por descripciones objetivas de ingeniería (ej: "desviación respecto de la línea base", "modificación de la secuencia constructiva", "evento registrado en Libro de Obras N° X").
-3. ENFOQUE DIRECTO A LAS NECESIDADES DEL CLIENTE: Identifica con precisión las solicitudes específicas expresadas en las demandas, correos o antecedentes cargados.
-4. ESTÁNDAR IDIEM: Toda cuantificación debe fundamentarse en datos comprobables, análisis de ruta crítica (Delay Analysis), valores de subcontrato o precios de mercado, sin juicios de valor.
-5. FORMATO DE SALIDA ESTRICTO: NO incluyas razonamientos internos, borradores, metas ni análisis en inglés. Entrega ÚNICAMENTE el texto final redactado en español formal.
+REGLAS DE ORO:
+1. ANCLAJE ESTRICTO A LOS ANTECEDENTES: Utiliza EXCLUSIVAMENTE la información proporcionada. NO inventes hechos ni asumas datos no documentados.
+2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales.
+3. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. No entregues notas de trabajo ni textos en inglés.
 """
-
-def limpiar_respuesta_gemini(texto):
-    if not texto:
-        return ""
-    lines = texto.split("\n")
-    cleaned_lines = []
-    
-    palabras_prohibidas = [
-        "goal:", "constraints:", "drafting", "refining", "final polish", 
-        "self-correction", "structure:", "bullet points:", "tone:", "client:",
-        "objective:", "subject:", "additional task:", "strictly based on",
-        "let's refine", "strictly use provided", "output format:", "wait, the prompt"
-    ]
-    
-    for line in lines:
-        line_lower = line.strip().lower()
-        if any(p in line_lower for p in palabras_prohibidas):
-            continue
-        cleaned_lines.append(line)
-        
-    resultado = "\n".join(cleaned_lines).strip()
-    return resultado
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     if not api_key:
-        return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en los Secrets de Streamlit. Revisa la configuración de tu App."
+        return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en los Secrets de Streamlit."
     
-    prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA A REALIZAR:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
+    prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
     
-    # Nombres de modelos probados y estables
-    modelos_a_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-    
-    ultimo_error = ""
-    for nombre_modelo in modelos_a_probar:
-        try:
-            model = genai.GenerativeModel(
-                model_name=nombre_modelo,
-                generation_config={
-                    'temperature': 0.1,
-                    'max_output_tokens': 4000,
-                }
-            )
-            response = model.generate_content(prompt_completo)
-            if response and response.text:
-                texto_limpio = limpiar_respuesta_gemini(response.text)
-                if texto_limpio:
-                    return texto_limpio
-        except Exception as e:
-            ultimo_error = str(e)
-            continue
-            
-    return f"⚠️ Error al conectar con Gemini API: {ultimo_error}"
+    try:
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            generation_config={
+                'temperature': 0.2,
+                'max_output_tokens': 4000,
+            }
+        )
+        response = model.generate_content(prompt_completo)
+        if response and response.text:
+            return response.text.strip()
+    except Exception as e:
+        return f"⚠️ Error al conectar con Gemini API: {str(e)}"
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
@@ -250,7 +209,7 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta / Peritaje:", value="", placeholder="Ej: INFORME TÉCNICO DE PERTINENCIA, IMPACTO EN PLAZO Y EVALUACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO (CON CARGA DE ARCHIVOS)
+# PESTAÑA 2: ALCANCE Y CONTEXTO
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Carga de Antecedentes")
@@ -266,7 +225,7 @@ with tab2:
 
     # --- MÓDULO DE CARGA DE ARCHIVOS ---
     st.markdown("#### 📁 Cargar Documentos de Respaldo (Opcional)")
-    st.caption("Puedes subir la demanda, descripción de la obra, laudos o correos del cliente en formato PDF o DOCX para que el sistema adapte la propuesta directamente a las necesidades del caso.")
+    st.caption("Puedes subir la demanda, descripción de la obra, laudos o correos del cliente en formato PDF o DOCX.")
     
     uploaded_files = st.file_uploader("Seleccione archivos (.pdf, .docx):", type=["pdf", "docx"], accept_multiple_files=True)
     
@@ -301,10 +260,10 @@ with tab2:
 
     def aplicar_pulido_cap4():
         contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nTEXTO CAPÍTULO 4:\n{st.session_state.text_intro}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta el texto final del Capítulo 4 'Introducción / Contexto de la Obra' en párrafos ejecutivos formales en español. NO agregues encabezados de análisis, borradores ni notas en inglés."
+        prompt_tarea = "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' en párrafos ejecutivos formales en español."
         
         if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
-            with st.spinner("✨ Puliendo Capítulo 4 con Gemini IA y Guardarraíles IDIEM..."):
+            with st.spinner("✨ Puliendo Capítulo 4..."):
                 texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
                 st.session_state.text_intro = texto_pulido
                 st.session_state.key_intro_area = texto_pulido
@@ -327,10 +286,10 @@ with tab2:
 
     def aplicar_pulido_cap5():
         contexto_combinado = f"TEXTO CAPÍTULO 5:\n{st.session_state.text_alcance}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta el texto final del Capítulo 5 'Alcance Detallado' en español mediante un párrafo introductorio seguido de viñetas ('•') con verbos en infinitivo. NO incluyas procesos de pensamiento, notas en inglés ni borradores intermedios."
+        prompt_tarea = "Redacta el Capítulo 5 'Alcance Detallado' en español mediante viñetas ('•') con verbos en infinitivo."
         
         if st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
-            with st.spinner("✨ Puliendo Capítulo 5 con Gemini IA y Guardarraíles IDIEM..."):
+            with st.spinner("✨ Puliendo Capítulo 5..."):
                 texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
                 st.session_state.text_alcance = texto_pulido
                 st.session_state.key_alcance_area = texto_pulido
@@ -342,14 +301,10 @@ with tab2:
 
     def aplicar_generar_actividades():
         contexto_combinado = f"CLIENTE: {cliente}\n\nINTRODUCCIÓN (CAP 4):\n{st.session_state.text_intro}\n\nALCANCE (CAP 5):\n{st.session_state.text_alcance}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = """
-        Redacta el Capítulo 6 'Actividades y Etapas Propuestas' estructurado en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas exactamente a los puntos del alcance.
-        - NO incluyas inspección en terreno si no se menciona expresamente.
-        - NO incluyas normativas MOP si se trata de un contrato privado salvo que se soliciten.
-        - Redacta cada actividad en párrafos independientes y con la profundidad técnica de IDIEM.
-        """
+        prompt_tarea = "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' estructurado en Etapas secuenciales (Etapa A, Etapa B, etc.)."
+        
         if st.session_state.text_intro.strip() or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
-            with st.spinner("⚙️ Generando Capítulo 6 con Gemini IA y Guardarraíles IDIEM..."):
+            with st.spinner("⚙️ Generando Capítulo 6..."):
                 actividades_gen = llamar_ia_gemini(prompt_tarea, contexto_combinado)
                 st.session_state.auto_actividades = actividades_gen
 
