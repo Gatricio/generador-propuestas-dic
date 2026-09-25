@@ -4,8 +4,6 @@ from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
 import google.generativeai as genai
-import pypdf
-import docx
 
 # Configuración inicial de Streamlit
 st.set_page_config(
@@ -30,27 +28,6 @@ api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 
 if api_key:
     genai.configure(api_key=api_key.strip())
-
-# ---------------------------------------------------------
-# FUNCIONES PARA EXTRACCIÓN DE TEXTO DE ARCHIVOS
-# ---------------------------------------------------------
-def extraer_texto_pdf(file_bytes):
-    try:
-        pdf_reader = pypdf.PdfReader(BytesIO(file_bytes))
-        texto = ""
-        for page in pdf_reader.pages:
-            texto += page.extract_text() or ""
-        return texto
-    except Exception as e:
-        return f"[Error al leer PDF: {str(e)}]"
-
-def extraer_texto_docx(file_bytes):
-    try:
-        doc = docx.Document(BytesIO(file_bytes))
-        texto = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
-        return texto
-    except Exception as e:
-        return f"[Error al leer DOCX: {str(e)}]"
 
 # ---------------------------------------------------------
 # PROMPT DEL SISTEMA Y LLAMADA A GEMINI
@@ -212,7 +189,7 @@ with tab1:
 # PESTAÑA 2: ALCANCE Y CONTEXTO
 # ---------------------------------------------------------
 with tab2:
-    st.subheader("Descripción del Conflicto y Carga de Antecedentes")
+    st.subheader("Descripción del Conflicto y Antecedentes")
     
     if "text_intro" not in st.session_state:
         st.session_state.text_intro = ""
@@ -220,31 +197,6 @@ with tab2:
         st.session_state.text_alcance = ""
     if "auto_actividades" not in st.session_state:
         st.session_state.auto_actividades = ""
-    if "texto_adjuntos" not in st.session_state:
-        st.session_state.texto_adjuntos = ""
-
-    # --- MÓDULO DE CARGA DE ARCHIVOS ---
-    st.markdown("#### 📁 Cargar Documentos de Respaldo (Opcional)")
-    st.caption("Puedes subir la demanda, descripción de la obra, laudos o correos del cliente en formato PDF o DOCX.")
-    
-    uploaded_files = st.file_uploader("Seleccione archivos (.pdf, .docx):", type=["pdf", "docx"], accept_multiple_files=True)
-    
-    if uploaded_files:
-        texto_extraido_total = []
-        for file in uploaded_files:
-            bytes_data = file.read()
-            if file.name.endswith(".pdf"):
-                txt = extraer_texto_pdf(bytes_data)
-            elif file.name.endswith(".docx"):
-                txt = extraer_texto_docx(bytes_data)
-            else:
-                txt = ""
-            texto_extraido_total.append(f"--- DOCUMENTO: {file.name} ---\n{txt}\n")
-        
-        st.session_state.texto_adjuntos = "\n".join(texto_extraido_total)
-        st.success(f"¡Se han procesado {len(uploaded_files)} archivo(s) correctamente!")
-
-    st.markdown("---")
 
     # --- CAPÍTULO 4: INTRODUCCIÓN ---
     st.markdown("#### 4. Introducción / Contexto de la Obra")
@@ -259,10 +211,10 @@ with tab2:
     st.session_state.text_intro = intro_input
 
     def aplicar_pulido_cap4():
-        contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nTEXTO CAPÍTULO 4:\n{st.session_state.text_intro}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
+        contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nTEXTO CAPÍTULO 4:\n{st.session_state.text_intro}"
         prompt_tarea = "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' en párrafos ejecutivos formales en español."
         
-        if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
+        if st.session_state.text_intro.strip():
             with st.spinner("✨ Puliendo Capítulo 4..."):
                 texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
                 st.session_state.text_intro = texto_pulido
@@ -285,10 +237,10 @@ with tab2:
     st.session_state.text_alcance = alcance_input
 
     def aplicar_pulido_cap5():
-        contexto_combinado = f"TEXTO CAPÍTULO 5:\n{st.session_state.text_alcance}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
+        contexto_combinado = f"TEXTO CAPÍTULO 5:\n{st.session_state.text_alcance}"
         prompt_tarea = "Redacta el Capítulo 5 'Alcance Detallado' en español mediante viñetas ('•') con verbos en infinitivo."
         
-        if st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
+        if st.session_state.text_alcance.strip():
             with st.spinner("✨ Puliendo Capítulo 5..."):
                 texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
                 st.session_state.text_alcance = texto_pulido
@@ -300,10 +252,10 @@ with tab2:
     st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial IDIEM)")
 
     def aplicar_generar_actividades():
-        contexto_combinado = f"CLIENTE: {cliente}\n\nINTRODUCCIÓN (CAP 4):\n{st.session_state.text_intro}\n\nALCANCE (CAP 5):\n{st.session_state.text_alcance}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
+        contexto_combinado = f"CLIENTE: {cliente}\n\nINTRODUCCIÓN (CAP 4):\n{st.session_state.text_intro}\n\nALCANCE (CAP 5):\n{st.session_state.text_alcance}"
         prompt_tarea = "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' estructurado en Etapas secuenciales (Etapa A, Etapa B, etc.)."
         
-        if st.session_state.text_intro.strip() or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
+        if st.session_state.text_intro.strip() or st.session_state.text_alcance.strip():
             with st.spinner("⚙️ Generando Capítulo 6..."):
                 actividades_gen = llamar_ia_gemini(prompt_tarea, contexto_combinado)
                 st.session_state.auto_actividades = actividades_gen
