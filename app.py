@@ -3,7 +3,8 @@ import datetime
 from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import pypdf
 import docx
 
@@ -33,8 +34,13 @@ def obtener_api_key():
 
 api_key = obtener_api_key()
 
-if api_key:
-    genai.configure(api_key=api_key.strip())
+@st.cache_resource
+def get_gemini_client(key):
+    if not key:
+        return None
+    return genai.Client(api_key=key.strip())
+
+client = get_gemini_client(api_key)
 
 # ---------------------------------------------------------
 # FUNCIONES PARA EXTRACCIÓN DE TEXTO DE ARCHIVOS
@@ -71,53 +77,61 @@ REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
    - SUSTITUYE por descripciones objetivas de ingeniería (ej: "desviación respecto de la línea base", "modificación de la secuencia constructiva", "evento registrado en Libro de Obras N° X").
 3. ENFOQUE DIRECTO A LAS NECESIDADES DEL CLIENTE: Identifica con precisión las solicitudes específicas expresadas en las demandas, correos o antecedentes cargados.
 4. ESTÁNDAR IDIEM: Toda cuantificación debe fundamentarse en datos comprobables, análisis de ruta crítica (Delay Analysis), valores de subcontrato o precios de mercado, sin juicios de valor.
-5. FORMATO DE SALIDA ESTRICTO: NO incluyas razonamientos internos, notas en inglés, borradores de trabajo ni análisis intermedios. Entrega ÚNICAMENTE el texto final redactado en español formal corporativo.
+5. PROHIBICIÓN ABSOLUTA DE RAZONAMIENTO VISIBLE: Está estrictamente prohibido incluir introducciones, borradores, listas de cotejo, metas, objetivos, explicaciones de pasos ni razonamientos en inglés o español (ej: NO escribir "Goal:", "Constraints:", "Drafting", "Refining", "Final Polish", "Self-Correction"). Entrega ÚNICAMENTE el texto final en español redactado para la propuesta.
 """
 
+def limpiar_respuesta_gemini(texto):
+    if not texto:
+        return ""
+    lines = texto.split("\n")
+    cleaned_lines = []
+    skip_mode = False
+    
+    palabras_prohibidas = [
+        "goal:", "constraints:", "drafting", "refining", "final polish", 
+        "self-correction", "structure:", "bullet points:", "tone:", "client:",
+        "objective:", "subject:", "additional task:", "strictly based on",
+        "let's refine", "strictly use provided", "output format:", "wait, the prompt"
+    ]
+    
+    for line in lines:
+        line_lower = line.strip().lower()
+        
+        # Ignorar líneas que comiencen con comandos de razonamiento
+        if any(line_lower.startswith(p) or line_lower.endswith(p) for p in palabras_prohibidas):
+            continue
+        if any(p in line_lower for p in ["*   goal:", "*   tone:", "*   constraints:", "*   drafting", "*   refining"]):
+            continue
+            
+        cleaned_lines.append(line)
+        
+    resultado = "\n".join(cleaned_lines).strip()
+    return resultado
+
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
-    if not api_key:
+    if not client:
         return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en los Secrets de Streamlit. Revisa la configuración de tu App."
     
-    prompt_completo = (
-        f"{SYSTEM_GUARDRAILS_IDIEM}\n\n"
-        f"TAREA:\n{prompt_tarea}\n\n"
-        f"ANTECEDENTES DEL CASO:\n{contexto_usuario}\n\n"
-        "INSTRUCCIÓN FINAL IMPORTANTE: Responde ÚNICAMENTE con el texto final pulido y profesional en español. NO agregues notas, borradores ni explicaciones en inglés."
-    )
+    prompt_completo = f"TAREA A REALIZAR:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
     
-    # 1. Obtener modelos disponibles dinámicamente desde la cuenta de Google
-    modelos_disponibles = []
-    try:
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                nombre_clean = m.name.replace("models/", "")
-                modelos_disponibles.append(nombre_clean)
-    except Exception:
-        pass
-
-    # Fallback si no se logra listar los modelos
-    if not modelos_disponibles:
-        modelos_disponibles = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-
-    # 2. Probar conectividad con el primer modelo funcional
+    modelos_a_probar = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+    
     ultimo_error = ""
-    for nombre_modelo in modelos_disponibles:
+    for nombre_modelo in modelos_a_probar:
         try:
-            model = genai.GenerativeModel(
-                model_name=nombre_modelo,
-                generation_config={
-                    'temperature': 0.2,
-                    'max_output_tokens': 4000,
-                }
+            response = client.models.generate_content(
+                model=nombre_modelo,
+                contents=prompt_completo,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_GUARDRAILS_IDIEM,
+                    temperature=0.1,
+                    max_output_tokens=4000,
+                )
             )
-            response = model.generate_content(prompt_completo)
             if response and response.text:
-                res_clean = response.text.strip()
-                # Elimina encabezados sobrantes si el modelo los incluyó
-                if "Drafting" in res_clean or "Senior Expert Engineer" in res_clean:
-                    lines = res_clean.split("\n")
-                    res_clean = "\n".join([l for l in lines if not l.startswith("Drafting") and not "Senior Expert Engineer" in l]).strip()
-                return res_clean
+                texto_limpio = limpiar_respuesta_gemini(response.text)
+                if texto_limpio:
+                    return texto_limpio
         except Exception as e:
             ultimo_error = str(e)
             continue
@@ -300,7 +314,7 @@ with tab2:
 
     def aplicar_pulido_cap4():
         contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nTEXTO CAPÍTULO 4:\n{st.session_state.text_intro}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta en español el Capítulo 4 'Introducción / Contexto de la Obra' estructurado en párrafos ejecutivos claros, objetivos y formales. Mantiene la neutralidad e imparcialidad pericial de IDIEM."
+        prompt_tarea = "Redacta el texto final del Capítulo 4 'Introducción / Contexto de la Obra' en párrafos ejecutivos formales en español. NO agregues encabezados de análisis, borradores ni notas en inglés."
         
         if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("✨ Puliendo Capítulo 4 con Gemini IA y Guardarraíles IDIEM..."):
@@ -326,7 +340,7 @@ with tab2:
 
     def aplicar_pulido_cap5():
         contexto_combinado = f"TEXTO CAPÍTULO 5:\n{st.session_state.text_alcance}\n\nANTECEDENTES SUBIDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta en español el Capítulo 5 'Alcance Detallado' formalizando los puntos específicos a evaluar mediante viñetas ('•') con verbos en infinitivo. Mantiene la estricta neutralidad de IDIEM."
+        prompt_tarea = "Redacta el texto final del Capítulo 5 'Alcance Detallado' en español mediante un párrafo introductorio seguido de viñetas ('•') con verbos en infinitivo. NO incluyas procesos de pensamiento, notas en inglés ni borradores intermedios."
         
         if st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("✨ Puliendo Capítulo 5 con Gemini IA y Guardarraíles IDIEM..."):
