@@ -3,8 +3,7 @@ import datetime
 from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 import pypdf
 import docx
 
@@ -34,13 +33,8 @@ def obtener_api_key():
 
 api_key = obtener_api_key()
 
-@st.cache_resource
-def get_gemini_client(key):
-    if not key:
-        return None
-    return genai.Client(api_key=key.strip())
-
-client = get_gemini_client(api_key)
+if api_key:
+    genai.configure(api_key=api_key.strip())
 
 # ---------------------------------------------------------
 # FUNCIONES PARA EXTRACCIÓN DE TEXTO DE ARCHIVOS
@@ -77,7 +71,7 @@ REGLAS DE ORO Y GUARDARRAÍLES DE NEUTRALIDAD:
    - SUSTITUYE por descripciones objetivas de ingeniería (ej: "desviación respecto de la línea base", "modificación de la secuencia constructiva", "evento registrado en Libro de Obras N° X").
 3. ENFOQUE DIRECTO A LAS NECESIDADES DEL CLIENTE: Identifica con precisión las solicitudes específicas expresadas en las demandas, correos o antecedentes cargados.
 4. ESTÁNDAR IDIEM: Toda cuantificación debe fundamentarse en datos comprobables, análisis de ruta crítica (Delay Analysis), valores de subcontrato o precios de mercado, sin juicios de valor.
-5. PROHIBICIÓN ABSOLUTA DE RAZONAMIENTO VISIBLE: Está estrictamente prohibido incluir introducciones, borradores, listas de cotejo, metas, objetivos, explicaciones de pasos ni razonamientos en inglés o español (ej: NO escribir "Goal:", "Constraints:", "Drafting", "Refining", "Final Polish", "Self-Correction"). Entrega ÚNICAMENTE el texto final en español redactado para la propuesta.
+5. FORMATO DE SALIDA ESTRICTO: NO incluyas razonamientos internos, borradores, metas ni análisis en inglés. Entrega ÚNICAMENTE el texto final redactado en español formal.
 """
 
 def limpiar_respuesta_gemini(texto):
@@ -103,25 +97,25 @@ def limpiar_respuesta_gemini(texto):
     return resultado
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
-    if not client:
+    if not api_key:
         return "⚠️ Error: No se encontró la clave GEMINI_API_KEY en los Secrets de Streamlit. Revisa la configuración de tu App."
     
-    prompt_completo = f"TAREA A REALIZAR:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
+    prompt_completo = f"{SYSTEM_GUARDRAILS_IDIEM}\n\nTAREA A REALIZAR:\n{prompt_tarea}\n\nANTECEDENTES DEL CASO:\n{contexto_usuario}"
     
-    modelos_a_probar = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+    # Nombres de modelos probados y estables
+    modelos_a_probar = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
     
     ultimo_error = ""
     for nombre_modelo in modelos_a_probar:
         try:
-            response = client.models.generate_content(
-                model=nombre_modelo,
-                contents=prompt_completo,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_GUARDRAILS_IDIEM,
-                    temperature=0.1,
-                    max_output_tokens=4000,
-                )
+            model = genai.GenerativeModel(
+                model_name=nombre_modelo,
+                generation_config={
+                    'temperature': 0.1,
+                    'max_output_tokens': 4000,
+                }
             )
+            response = model.generate_content(prompt_completo)
             if response and response.text:
                 texto_limpio = limpiar_respuesta_gemini(response.text)
                 if texto_limpio:
