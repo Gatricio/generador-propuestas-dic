@@ -576,4 +576,63 @@ with tab4:
             'LISTA_ACTIVIDADES_LINEAS': lista_actividades_lineas,
 
             'LISTA_EXCLUSIONES': lista_excl,
-            'NOTA_IMPUESTOS
+            'NOTA_IMPUESTOS_IVA': regimen_iva,
+
+            'HH_ASESOR': hh_asesor,
+            'TAR_ASESOR': f"{tar_asesor:.1f}".replace(".", ","),
+            'TOT_HH_ASESOR': int(hh_asesor * meses_val),
+            'TOT_UF_ASESOR': f"{int(hh_asesor * tar_asesor * meses_val):,.0f}".replace(",", "."),
+
+            'HH_JEFE': hh_jefe,
+            'TAR_JEFE': f"{tar_jefe:.1f}".replace(".", ","),
+            'TOT_HH_JEFE': int(hh_jefe * meses_val),
+            'TOT_UF_JEFE': f"{int(hh_jefe * tar_jefe * meses_val):,.0f}".replace(",", "."),
+
+            'HH_AN1': hh_an1,
+            'TAR_AN1': f"{tar_an1:.1f}".replace(".", ","),
+            'TOT_HH_AN1': int(hh_an1 * meses_val),
+            'TOT_UF_AN1': f"{int(hh_an1 * tar_an1 * meses_val):,.0f}".replace(",", "."),
+
+            'HH_AN2': hh_an2,
+            'TAR_AN2': f"{tar_an2:.1f}".replace(".", ","),
+            'TOT_HH_AN2': int(hh_an2 * meses_val),
+            'TOT_UF_AN2': f"{int(hh_an2 * tar_an2 * meses_val):,.0f}".replace(",", "."),
+
+            'HH_AN3': hh_an3,
+            'TAR_AN3': f"{tar_an3:.1f}".replace(".", ","),
+            'TOT_HH_AN3': int(hh_an3 * meses_val),
+            'TOT_UF_AN3': f"{int(hh_an3 * tar_an3 * meses_val):,.0f}".replace(",", "."),
+
+            'HH_AN4': hh_an4,
+            'TAR_AN4': f"{tar_an4:.1f}".replace(".", ","),
+            'TOT_HH_AN4': int(hh_an4 * meses_val),
+            'TOT_UF_AN4': f"{int(hh_an4 * tar_an4 * meses_val):,.0f}".replace(",", "."),
+
+            'HH_AN5': hh_an5,
+            'TAR_AN5': f"{tar_an5:.1f}".replace(".", ","),
+            'TOT_HH_AN5': int(hh_an5 * meses_val),
+            'TOT_UF_AN5': f"{int(hh_an5 * tar_an5 * meses_val):,.0f}".replace(",", "."),
+
+            'TOT_HH_GENERAL': int(tot_hh),
+
+            'TIT_H1': titulo_h1, 'PCT_H1': pct_h1, 'UF_H1': f"{int(tot_uf * (pct_h1/100)):,.0f}".replace(",", "."),
+            'TIT_H2': titulo_h2, 'PCT_H2': pct_h2, 'UF_H2': f"{int(tot_uf * (pct_h2/100)):,.0f}".replace(",", "."),
+            'TIT_H3': titulo_h3, 'PCT_H3': pct_h3, 'UF_H3': f"{int(tot_uf * (pct_h3/100)):,.0f}".replace(",", "."),
+            'TIT_H4': titulo_h4, 'PCT_H4': pct_h4, 'UF_H4': f"{int(tot_uf * (pct_h4/100)):,.0f}".replace(",", "."),
+            'TIT_H5': titulo_h5, 'PCT_H5': pct_h5, 'UF_H5': f"{int(tot_uf * (pct_h5/100)):,.0f}".replace(",", "."),
+        }
+
+        doc.render(contexto)
+
+        buffer = BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        return buffer
+
+    st.download_button(
+        label="📥 Descargar Propuesta Emitida Formato Oficial (.docx)",
+        data=generar_documento_word(),
+        file_name=f"Propuesta_IDIEM_{codigo if codigo else 'PR.DIC'}.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        use_container_width=True
+    )
