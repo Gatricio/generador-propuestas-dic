@@ -27,8 +27,13 @@ st.markdown("""
 # ---------------------------------------------------------
 def obtener_configuracion_gemini():
     keys = []
-    models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
-    
+    # ✅ Lista de modelos vigentes (reemplaza a los descontinuados 1.5 / 2.0)
+    models = [
+        "gemini-3.8-flash",
+        "gemini-3.6-flash",
+        "gemini-2.5-flash",
+    ]
+
     # 1. Lectura desde el bloque [gemini] en secrets.toml
     if "gemini" in st.secrets:
         gemini_sec = st.secrets["gemini"]
@@ -36,19 +41,19 @@ def obtener_configuracion_gemini():
             keys = [k.strip() for k in gemini_sec["api_keys"] if k.strip()]
         if "models" in gemini_sec and isinstance(gemini_sec["models"], list):
             models = [m.strip() for m in gemini_sec["models"] if m.strip()]
-            
+
     # 2. Respaldo para lista en la raíz
     elif "GEMINI_API_KEYS" in st.secrets:
         raw_keys = st.secrets["GEMINI_API_KEYS"]
         if isinstance(raw_keys, list):
             keys = [k.strip() for k in raw_keys if k.strip()]
-            
+
     # 3. Respaldo para clave individual clásica
     if not keys:
         single_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
         if single_key:
             keys = [single_key.strip()]
-            
+
     return keys, models
 
 api_keys, modelos_disponibles = obtener_configuracion_gemini()
@@ -129,7 +134,7 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
             ultimo_error = str(key_err)
             continue
 
-    return f"⚠️ Error al conectar con Gemini API (Cuotas agotadas en todas las llaves): {ultimo_error}"
+    return f"⚠️ Error al conectar con Gemini API (Claves o modelos agotados): {ultimo_error}"
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
@@ -272,9 +277,9 @@ with tab2:
     # --- MÓDULO DE CARGA DE ARCHIVOS DE RESPALDO ---
     st.markdown("#### 📁 Cargar Documentos de Respaldo (Demanda, Correos, EETT, etc.)")
     st.caption("Sube los archivos PDF o DOCX del caso. La IA leerá el contenido para extraer antecedentes técnicos concretos y alimentar la redacción de los capítulos.")
-    
+
     uploaded_files = st.file_uploader("Seleccione archivos (.pdf, .docx):", type=["pdf", "docx"], accept_multiple_files=True)
-    
+
     if uploaded_files:
         texto_extraido_total = []
         for file in uploaded_files:
@@ -286,7 +291,7 @@ with tab2:
             else:
                 txt = ""
             texto_extraido_total.append(f"--- INICIO DOCUMENTO: {file.name} ---\n{txt}\n--- FIN DOCUMENTO ---")
-        
+
         st.session_state.texto_adjuntos = "\n\n".join(texto_extraido_total)
         st.success(f"¡Se han procesado {len(uploaded_files)} archivo(s) correctamente!")
 
@@ -571,63 +576,4 @@ with tab4:
             'LISTA_ACTIVIDADES_LINEAS': lista_actividades_lineas,
 
             'LISTA_EXCLUSIONES': lista_excl,
-            'NOTA_IMPUESTOS_IVA': regimen_iva,
-
-            'HH_ASESOR': hh_asesor,
-            'TAR_ASESOR': f"{tar_asesor:.1f}".replace(".", ","),
-            'TOT_HH_ASESOR': int(hh_asesor * meses_val),
-            'TOT_UF_ASESOR': f"{int(hh_asesor * tar_asesor * meses_val):,.0f}".replace(",", "."),
-
-            'HH_JEFE': hh_jefe,
-            'TAR_JEFE': f"{tar_jefe:.1f}".replace(".", ","),
-            'TOT_HH_JEFE': int(hh_jefe * meses_val),
-            'TOT_UF_JEFE': f"{int(hh_jefe * tar_jefe * meses_val):,.0f}".replace(",", "."),
-
-            'HH_AN1': hh_an1,
-            'TAR_AN1': f"{tar_an1:.1f}".replace(".", ","),
-            'TOT_HH_AN1': int(hh_an1 * meses_val),
-            'TOT_UF_AN1': f"{int(hh_an1 * tar_an1 * meses_val):,.0f}".replace(",", "."),
-
-            'HH_AN2': hh_an2,
-            'TAR_AN2': f"{tar_an2:.1f}".replace(".", ","),
-            'TOT_HH_AN2': int(hh_an2 * meses_val),
-            'TOT_UF_AN2': f"{int(hh_an2 * tar_an2 * meses_val):,.0f}".replace(",", "."),
-
-            'HH_AN3': hh_an3,
-            'TAR_AN3': f"{tar_an3:.1f}".replace(".", ","),
-            'TOT_HH_AN3': int(hh_an3 * meses_val),
-            'TOT_UF_AN3': f"{int(hh_an3 * tar_an3 * meses_val):,.0f}".replace(",", "."),
-
-            'HH_AN4': hh_an4,
-            'TAR_AN4': f"{tar_an4:.1f}".replace(".", ","),
-            'TOT_HH_AN4': int(hh_an4 * meses_val),
-            'TOT_UF_AN4': f"{int(hh_an4 * tar_an4 * meses_val):,.0f}".replace(",", "."),
-
-            'HH_AN5': hh_an5,
-            'TAR_AN5': f"{tar_an5:.1f}".replace(".", ","),
-            'TOT_HH_AN5': int(hh_an5 * meses_val),
-            'TOT_UF_AN5': f"{int(hh_an5 * tar_an5 * meses_val):,.0f}".replace(",", "."),
-
-            'TOT_HH_GENERAL': int(tot_hh),
-
-            'TIT_H1': titulo_h1, 'PCT_H1': pct_h1, 'UF_H1': f"{int(tot_uf * (pct_h1/100)):,.0f}".replace(",", "."),
-            'TIT_H2': titulo_h2, 'PCT_H2': pct_h2, 'UF_H2': f"{int(tot_uf * (pct_h2/100)):,.0f}".replace(",", "."),
-            'TIT_H3': titulo_h3, 'PCT_H3': pct_h3, 'UF_H3': f"{int(tot_uf * (pct_h3/100)):,.0f}".replace(",", "."),
-            'TIT_H4': titulo_h4, 'PCT_H4': pct_h4, 'UF_H4': f"{int(tot_uf * (pct_h4/100)):,.0f}".replace(",", "."),
-            'TIT_H5': titulo_h5, 'PCT_H5': pct_h5, 'UF_H5': f"{int(tot_uf * (pct_h5/100)):,.0f}".replace(",", "."),
-        }
-
-        doc.render(contexto)
-
-        buffer = BytesIO()
-        doc.save(buffer)
-        buffer.seek(0)
-        return buffer
-
-    st.download_button(
-        label="📥 Descargar Propuesta Emitida Formato Oficial (.docx)",
-        data=generar_documento_word(),
-        file_name=f"Propuesta_IDIEM_{codigo if codigo else 'PR.DIC'}.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        use_container_width=True
-    )
+            'NOTA_IMPUESTOS
