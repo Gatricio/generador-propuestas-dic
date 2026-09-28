@@ -27,11 +27,11 @@ st.markdown("""
 # ---------------------------------------------------------
 def obtener_configuracion_gemini():
     keys = []
-    # ✅ Lista de modelos vigentes (reemplaza a los descontinuados 1.5 / 2.0)
+    # ✅ Lista de modelos vigentes (serie 3.x). NO usar 2.5 ni anteriores.
     models = [
         "gemini-3.8-flash",
+        "gemini-3.7-flash",
         "gemini-3.6-flash",
-        "gemini-2.5-flash",
     ]
 
     # 1. Lectura desde el bloque [gemini] en secrets.toml
