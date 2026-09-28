@@ -4,8 +4,6 @@ from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
 from google import genai
-import pypdf
-import docx
 
 # Configuración inicial de Streamlit
 st.set_page_config(
@@ -40,6 +38,7 @@ if api_key:
 # ---------------------------------------------------------
 def extraer_texto_pdf(file_bytes):
     try:
+        import pypdf
         pdf_reader = pypdf.PdfReader(BytesIO(file_bytes))
         texto = ""
         for page in pdf_reader.pages:
@@ -50,6 +49,7 @@ def extraer_texto_pdf(file_bytes):
 
 def extraer_texto_docx(file_bytes):
     try:
+        import docx
         doc = docx.Document(BytesIO(file_bytes))
         texto = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
         return texto
@@ -57,7 +57,7 @@ def extraer_texto_docx(file_bytes):
         return f"[Error al leer DOCX: {str(e)}]"
 
 # ---------------------------------------------------------
-# PROMPT DEL SISTEMA Y LLAMADA A GEMINI
+# PROMPT DEL SISTEMA Y LLAMADA A GEMINI (INTERACTIONS API)
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
 Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
@@ -67,7 +67,7 @@ REGLAS DE ORO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
 3. PROFUNDIDAD Y REDACCIÓN EJECUTIVA: Amplía el texto desarrollando las ideas en párrafos formales de ingeniería, relacionando los datos del contrato, fechas y elementos técnicos presentes en los antecedentes. No te limites a corregir la ortografía; dale estructura profesional.
-4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
+4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda strictly prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
@@ -80,17 +80,19 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
         f"ANTECEDENTES DEL CASO Y DOCUMENTOS ADJUNTOS:\n{contexto_usuario}"
     )
 
-    nombre_modelo = "gemini-2.5-flash"
+    nombre_modelo = "gemini-3.8-flash"
 
     try:
-        response = client.models.generate_content(
+        interaction = client.interactions.create(
             model=nombre_modelo,
-            contents=prompt_completo,
+            input=prompt_completo,
         )
-        if response and response.text:
-            return response.text.strip()
+        if interaction and hasattr(interaction, 'output_text') and interaction.output_text:
+            return interaction.output_text.strip()
+        elif interaction and hasattr(interaction, 'text') and interaction.text:
+            return interaction.text.strip()
         else:
-            return "⚠️ La IA no generó una respuesta."
+            return str(interaction)
     except Exception as e:
         return f"⚠️ Error al conectar con Gemini API: {str(e)}"
 
@@ -103,7 +105,7 @@ def numero_a_palabras_uf(n):
         return "cero"
 
     unidades = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"]
-    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"]
+    especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "diecisiete", "dieciocho", "diecinueve"]
     decenas = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"]
     centenas = ["", "ciento", "doscientas", "trescientas", "cuatrocientas", "quinientas", "seiscientas", "setecientas", "ochocientas", "novecientas"]
 
@@ -218,7 +220,7 @@ with tab1:
     nombre_propuesta = st.text_input("Nombre Oficial de la Propuesta / Peritaje:", value="", placeholder="Ej: INFORME TÉCNICO DE PERTINENCIA, IMPACTO EN PLAZO Y EVALUACIÓN DE MAYORES COSTOS...")
 
 # ---------------------------------------------------------
-# PESTAÑA 2: ALCANCE Y CONTEXTO (CON CARGA DE DOCUMENTOS)
+# PESTAÑA 2: ALCANCE Y CONTEXTO
 # ---------------------------------------------------------
 with tab2:
     st.subheader("Descripción del Conflicto y Carga de Antecedentes")
