@@ -4,6 +4,7 @@ from io import BytesIO
 import streamlit as st
 from docxtpl import DocxTemplate
 from google import genai
+from google.genai import types
 
 # Configuración inicial de Streamlit
 st.set_page_config(
@@ -22,16 +23,35 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# OBTENCIÓN DE LA API KEY Y CONFIGURACIÓN DEL CLIENTE
+# OBTENCIÓN DE MÚLTIPLES API KEYS Y MODELOS DESDE SECRETS
 # ---------------------------------------------------------
-api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+def obtener_configuracion_gemini():
+    keys = []
+    models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+    
+    # 1. Lectura desde el bloque [gemini] en secrets.toml
+    if "gemini" in st.secrets:
+        gemini_sec = st.secrets["gemini"]
+        if "api_keys" in gemini_sec and isinstance(gemini_sec["api_keys"], list):
+            keys = [k.strip() for k in gemini_sec["api_keys"] if k.strip()]
+        if "models" in gemini_sec and isinstance(gemini_sec["models"], list):
+            models = [m.strip() for m in gemini_sec["models"] if m.strip()]
+            
+    # 2. Respaldo para lista en la raíz
+    elif "GEMINI_API_KEYS" in st.secrets:
+        raw_keys = st.secrets["GEMINI_API_KEYS"]
+        if isinstance(raw_keys, list):
+            keys = [k.strip() for k in raw_keys if k.strip()]
+            
+    # 3. Respaldo para clave individual clásica
+    if not keys:
+        single_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+        if single_key:
+            keys = [single_key.strip()]
+            
+    return keys, models
 
-client = None
-if api_key:
-    try:
-        client = genai.Client(api_key=api_key.strip())
-    except Exception as e:
-        st.error(f"Error al configurar el cliente de Gemini: {e}")
+api_keys, modelos_disponibles = obtener_configuracion_gemini()
 
 # ---------------------------------------------------------
 # FUNCIONES PARA EXTRACCIÓN DE TEXTO DE ARCHIVOS
@@ -57,7 +77,7 @@ def extraer_texto_docx(file_bytes):
         return f"[Error al leer DOCX: {str(e)}]"
 
 # ---------------------------------------------------------
-# PROMPT DEL SISTEMA Y LLAMADA A GEMINI (INTERACTIONS API)
+# PROMPT DEL SISTEMA Y LLAMADA A GEMINI CON ROTACIÓN
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
 Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
@@ -67,34 +87,49 @@ REGLAS DE ORO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
 3. PROFUNDIDAD Y REDACCIÓN EJECUTIVA: Amplía el texto desarrollando las ideas en párrafos formales de ingeniería, relacionando los datos del contrato, fechas y elementos técnicos presentes en los antecedentes. No te limites a corregir la ortografía; dale estructura profesional.
-4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda strictly prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
+4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
-    if not client:
-        return "⚠️ Error: No se encontró la clave GEMINI_API_KEY o el cliente no se inicializó correctamente."
+    if not api_keys:
+        return "⚠️ Error: No se encontraron API Keys configuradas en st.secrets."
 
     prompt_completo = (
-        f"{SYSTEM_GUARDRAILS_IDIEM}\n\n"
         f"TAREA A REALIZAR:\n{prompt_tarea}\n\n"
         f"ANTECEDENTES DEL CASO Y DOCUMENTOS ADJUNTOS:\n{contexto_usuario}"
     )
 
-    nombre_modelo = "gemini-3.8-flash"
+    ultimo_error = ""
 
-    try:
-        interaction = client.interactions.create(
-            model=nombre_modelo,
-            input=prompt_completo,
-        )
-        if interaction and hasattr(interaction, 'output_text') and interaction.output_text:
-            return interaction.output_text.strip()
-        elif interaction and hasattr(interaction, 'text') and interaction.text:
-            return interaction.text.strip()
-        else:
-            return str(interaction)
-    except Exception as e:
-        return f"⚠️ Error al conectar con Gemini API: {str(e)}"
+    # Bucle de rotación por clave y modelo
+    for key in api_keys:
+        try:
+            client_temp = genai.Client(api_key=key)
+            for nombre_modelo in modelos_disponibles:
+                try:
+                    response = client_temp.models.generate_content(
+                        model=nombre_modelo,
+                        contents=prompt_completo,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_GUARDRAILS_IDIEM,
+                            temperature=0.2,
+                            max_output_tokens=4000,
+                        )
+                    )
+                    if response and response.text:
+                        return response.text.strip()
+                except Exception as model_err:
+                    err_msg = str(model_err)
+                    ultimo_error = err_msg
+                    # Si la clave actual agotó su límite o cuota, salta inmediatamente a la siguiente clave
+                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                        break
+                    continue
+        except Exception as key_err:
+            ultimo_error = str(key_err)
+            continue
+
+    return f"⚠️ Error al conectar con Gemini API (Cuotas agotadas en todas las llaves): {ultimo_error}"
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
