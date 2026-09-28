@@ -1,5 +1,5 @@
 streamlit
 docxtpl==0.20.2
 python-docx
-google-genai
+google-genai==2.24.0
 pypdf
