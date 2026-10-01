@@ -1,5 +1,6 @@
 import os
 import time
+import re
 import datetime
 from io import BytesIO
 import streamlit as st
@@ -83,16 +84,30 @@ def extraer_texto_docx(file_bytes):
         return f"[Error al leer DOCX: {str(e)}]"
 
 # ---------------------------------------------------------
+# FUNCIÓN DE LIMPIEZA DE FORMATO MARKDOWN Y SUBCAPÍTULOS
+# ---------------------------------------------------------
+def limpiar_formato_texto(texto):
+    if not texto:
+        return ""
+    # Eliminar símbolos de negrita o cursiva de Markdown (*)
+    texto = texto.replace("**", "").replace("*", "")
+    # Eliminar encabezados tipo Markdown (#)
+    texto = re.sub(r'#+\s*', '', texto)
+    # Eliminar subcapítulos o numeraciones al inicio de párrafo (ej: 4.1, 4.2, 4.1.1)
+    texto = re.sub(r'^\s*\d+(\.\d+)+\s*', '', texto, flags=re.MULTILINE)
+    return texto.strip()
+
+# ---------------------------------------------------------
 # PROMPT DEL SISTEMA Y LLAMADA A GEMINI CON ROTACIÓN Y REINTENTOS
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
 Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
 Tu objetivo es redactar propuestas técnicas e informes periciales con el máximo rigor de ingeniería, neutralidad y objetividad.
 
-REGLAS DE ORO:
+REGLAS DE ORO DE REDACCIÓN Y FORMATO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
-3. PROFUNDIDAD Y REDACCIÓN EJECUTIVA: Amplía el texto desarrollando las ideas en párrafos formales de ingeniería, relacionando los datos del contrato, fechas y elementos técnicos presentes en los antecedentes. No te limites a corregir la ortografía; dale estructura profesional.
+3. ESTRUCTURA EN PÁRRAFOS CONTINUOS: Redacta exclusivamente en párrafos formales de ingeniería continuos y fluídos. Queda ESTRICTAMENTE PROHIBIDO el uso de subcapítulos (ej: 4.1, 4.2), títulos secundarios, encabezados (#, ##, ###) o caracteres de formato Markdown como asteriscos de negrita (**).
 4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
@@ -129,7 +144,8 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
                             )
                         )
                         if response and response.text:
-                            return response.text.strip()
+                            # Se aplica la limpieza de Markdown y subcapítulos al texto generado
+                            return limpiar_formato_texto(response.text)
                     except Exception as model_err:
                         err_msg = str(model_err)
                         ultimo_error = err_msg
@@ -326,7 +342,11 @@ with tab2:
 
     def aplicar_pulido_cap4():
         contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nNOTAS DEL INGENIERO:\n{st.session_state.text_intro}\n\nDOCUMENTOS DE RESPALDO LEÍDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' integrando los datos técnicos, contractuales y el contexto presente en los documentos subidos. Entrega varios párrafos ejecutivos bien estructurados en español formal."
+        prompt_tarea = (
+            "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' integrando los datos técnicos, contractuales y el contexto presente en los documentos subidos. "
+            "Entrega varios párrafos ejecutivos bien estructurados en español formal. "
+            "REGLA ESTRICTA DE FORMATO: Redacta únicamente en párrafos continuos. Está PROHIBIDO incluir subcapítulos (como 4.1, 4.2), subtítulos, títulos secundarios, caracteres '#' o negritas con '**'."
+        )
 
         if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("✨ Puliendo e integrando antecedentes en Capítulo 4..."):
@@ -352,7 +372,10 @@ with tab2:
 
     def aplicar_pulido_cap5():
         contexto_combinado = f"NOTAS DEL ALCANCE:\n{st.session_state.text_alcance}\n\nDOCUMENTOS DE RESPALDO LEÍDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta el Capítulo 5 'Alcance Detallado' en español formal. Incluye un párrafo de encuadre inicial y luego formaliza las materias específicas a evaluar mediante viñetas ('•') con verbos en infinitivo, basándote en las reclamaciones reales descritas en los antecedentes."
+        prompt_tarea = (
+            "Redacta el Capítulo 5 'Alcance Detallado' en español formal. Incluye un párrafo de encuadre inicial y luego formaliza las materias específicas a evaluar mediante viñetas ('•') con verbos en infinitivo, basándote en las reclamaciones reales descritas en los antecedentes. "
+            "REGLA ESTRICTA DE FORMATO: No incluyas subcapítulos (ej: 5.1, 5.2), encabezados (#) ni caracteres '**'."
+        )
 
         if st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("✨ Puliendo e integrando Alcance en Capítulo 5..."):
@@ -367,7 +390,10 @@ with tab2:
 
     def aplicar_generar_actividades():
         contexto_combinado = f"CLIENTE: {cliente}\n\nINTRODUCCIÓN (CAP 4):\n{st.session_state.text_intro}\n\nALCANCE (CAP 5):\n{st.session_state.text_alcance}\n\nDOCUMENTOS DE RESPALDO LEÍDOS:\n{st.session_state.texto_adjuntos}"
-        prompt_tarea = "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' de forma extensa y detallada. Estructúralo en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas minuciosamente a los puntos del alcance e hitos documentados."
+        prompt_tarea = (
+            "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' de forma extensa y detallada. Estructúralo en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas minuciosamente a los puntos del alcance e hitos documentados. "
+            "REGLA ESTRICTA DE FORMATO: No utilices símbolos de formato Markdown como '#', '##' ni '**'."
+        )
 
         if st.session_state.text_intro.strip() or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("⚙️ Generando Capítulo 6 con máximo detalle técnico..."):
@@ -518,8 +544,9 @@ with tab4:
         str_duracion = f"{meses_val:.0f}" if meses_val.is_integer() else f"{meses_val}"
         monto_uf_palabras = numero_a_palabras_uf(tot_uf)
 
-        alcance_txt = st.session_state.text_alcance
-        intro_txt = st.session_state.text_intro
+        alcance_txt = limpiar_formato_texto(st.session_state.text_alcance)
+        intro_txt = limpiar_formato_texto(st.session_state.text_intro)
+        actividades_txt = limpiar_formato_texto(actividades)
 
         if alcance_txt.strip():
             oraciones = [s.strip() for s in alcance_txt.replace("\n", ". ").split(".") if s.strip()]
@@ -529,8 +556,8 @@ with tab4:
             resumen_alcance_20 = "El presente estudio comprende la evaluación técnica y contractual de los conceptos e impactos reclamados en el proyecto."
 
         lista_items_propuesta = []
-        if actividades.strip():
-            lines = actividades.split("\n")
+        if actividades_txt.strip():
+            lines = actividades_txt.split("\n")
             for line in lines:
                 line_str = line.strip()
                 if line_str.startswith("Etapa "):
@@ -547,7 +574,7 @@ with tab4:
 
         lista_introduccion_lineas = [l.strip() for l in intro_txt.split("\n") if l.strip()]
         lista_alcance_lineas = [l.strip() for l in alcance_txt.split("\n") if l.strip()]
-        lista_actividades_lineas = [l.strip() for l in actividades.split("\n") if l.strip()]
+        lista_actividades_lineas = [l.strip() for l in actividades_txt.split("\n") if l.strip()]
 
         lista_hitos_forma_pago = []
         raw_hitos = [
@@ -584,7 +611,7 @@ with tab4:
             'CONDICION_PAGO': condicion_pago,
             'TEXTO_INTRODUCCION': intro_txt,
             'TEXTO_ALCANCE_DETALLADO': alcance_txt,
-            'TEXTO_ACTIVIDADES_ETAPAS': actividades,
+            'TEXTO_ACTIVIDADES_ETAPAS': actividades_txt,
 
             'LISTA_INTRODUCCION_LINEAS': lista_introduccion_lineas,
             'LISTA_ALCANCE_LINEAS': lista_alcance_lineas,
