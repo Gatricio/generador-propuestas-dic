@@ -98,7 +98,7 @@ def limpiar_formato_texto(texto):
     return texto.strip()
 
 # ---------------------------------------------------------
-# PROMPT DEL SISTEMA Y LLAMADA A GEMINI CON ROTACIÓN Y REINTENTOS
+# PROMPT DEL SISTEMA Y LLAMADA A GEMINI CON ROTACIÓN Y REINTENTOS AMPLIADOS
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
 Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
@@ -115,8 +115,8 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     if not api_keys:
         return "⚠️ Error: No se encontraron API Keys configuradas en st.secrets."
 
-    # Acotar context window preventivo para evitar timeouts en archivos pesados (máx 25.000 caracteres)
-    contexto_acotado = contexto_usuario[:25000] if len(contexto_usuario) > 25000 else contexto_usuario
+    # Acotar context window preventivo para evitar timeouts en archivos pesados (máx 20.000 caracteres)
+    contexto_acotado = contexto_usuario[:20000] if len(contexto_usuario) > 20000 else contexto_usuario
 
     prompt_completo = (
         f"TAREA A REALIZAR:\n{prompt_tarea}\n\n"
@@ -125,13 +125,13 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
 
     ultimo_error = ""
 
-    # Bucle de rotación por clave y modelo con manejo de reintentos para error 503
+    # Bucle de rotación por clave y modelo con reintentos ampliados ante alta demanda (503)
     for key in api_keys:
         try:
             client_temp = genai.Client(api_key=key)
             for nombre_modelo in modelos_disponibles:
                 intentos = 0
-                max_intentos = 3
+                max_intentos = 5
                 while intentos < max_intentos:
                     try:
                         response = client_temp.models.generate_content(
@@ -140,7 +140,7 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
                             config=types.GenerateContentConfig(
                                 system_instruction=SYSTEM_GUARDRAILS_IDIEM,
                                 temperature=0.2,
-                                max_output_tokens=3000,
+                                max_output_tokens=2500,
                             )
                         )
                         if response and response.text:
@@ -150,10 +150,10 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
                         err_msg = str(model_err)
                         ultimo_error = err_msg
 
-                        # Control de error 503 (Servicio no disponible/Sobrecarga): reintenta con backoff
-                        if "503" in err_msg or "UNAVAILABLE" in err_msg or "overloaded" in err_msg.lower():
+                        # Control de error 503 (Servicio no disponible/Alta demanda): reintenta con backoff progresivo
+                        if "503" in err_msg or "UNAVAILABLE" in err_msg or "overloaded" in err_msg.lower() or "high demand" in err_msg.lower():
                             intentos += 1
-                            time.sleep(2 * intentos)
+                            time.sleep(3 * intentos)
                             continue
 
                         # Si la clave actual agotó su límite o cuota, salta inmediatamente a la siguiente clave
@@ -391,7 +391,7 @@ with tab2:
     def aplicar_generar_actividades():
         contexto_combinado = f"CLIENTE: {cliente}\n\nINTRODUCCIÓN (CAP 4):\n{st.session_state.text_intro}\n\nALCANCE (CAP 5):\n{st.session_state.text_alcance}\n\nDOCUMENTOS DE RESPALDO LEÍDOS:\n{st.session_state.texto_adjuntos}"
         prompt_tarea = (
-            "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' de forma extensa y detallada. Estructúralo en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas minuciosamente a los puntos del alcance e hitos documentados. "
+            "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' de forma estructurada. Estructúralo en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas minuciosamente a los puntos del alcance e hitos documentados. "
             "REGLA ESTRICTA DE FORMATO: No utilices símbolos de formato Markdown como '#', '##' ni '**'."
         )
 
