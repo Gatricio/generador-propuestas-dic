@@ -98,7 +98,7 @@ def limpiar_formato_texto(texto):
     return texto.strip()
 
 # ---------------------------------------------------------
-# PROMPT DEL SISTEMA Y LLAMADA A GEMINI CON ROTACIÓN Y REINTENTOS AMPLIADOS
+# PROMPT DEL SISTEMA Y GESTIÓN DE CACHÉ DE CONTEXTO
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
 Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
@@ -111,52 +111,93 @@ REGLAS DE ORO DE REDACCIÓN Y FORMATO:
 4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
-def llamar_ia_gemini(prompt_tarea, contexto_usuario):
+def crear_cache_contexto_si_aplica(client, modelo, texto_documentos):
+    # Solo crear caché si el texto es suficientemente extenso (> 100.000 caracteres)
+    if len(texto_documentos) < 100000:
+        return None
+    
+    try:
+        cache = client.caches.create(
+            model=modelo,
+            config=types.CreateCachedContentConfig(
+                contents=[f"DOCUMENTOS DE RESPALDO Y EXPEDIENTES SUBIDOS:\n{texto_documentos}"],
+                system_instruction=SYSTEM_GUARDRAILS_IDIEM,
+                ttl="1800s" # Duración de 30 minutos en caché
+            )
+        )
+        return cache
+    except Exception:
+        return None
+
+def llamar_ia_gemini_stream(prompt_tarea, notas_usuario, texto_adjuntos, placeholder_ui):
     if not api_keys:
-        return "⚠️ Error: No se encontraron API Keys configuradas en st.secrets."
-
-    # Acotar context window preventivo para evitar timeouts en archivos pesados (máx 20.000 caracteres)
-    contexto_acotado = contexto_usuario[:20000] if len(contexto_usuario) > 20000 else contexto_usuario
-
-    prompt_completo = (
-        f"TAREA A REALIZAR:\n{prompt_tarea}\n\n"
-        f"ANTECEDENTES DEL CASO Y DOCUMENTOS ADJUNTOS:\n{contexto_acotado}"
-    )
+        placeholder_ui.error("⚠️ Error: No se encontraron API Keys configuradas en st.secrets.")
+        return ""
 
     ultimo_error = ""
 
-    # Bucle de rotación por clave y modelo con reintentos ampliados ante alta demanda (503)
     for key in api_keys:
         try:
             client_temp = genai.Client(api_key=key)
             for nombre_modelo in modelos_disponibles:
                 intentos = 0
                 max_intentos = 5
+                
+                # Evaluación de volumen para decidir si usar Caché o Prompt directo
+                usar_cache = len(texto_adjuntos) >= 100000
+                cache_obj = None
+
+                if usar_cache and ("cache_name" not in st.session_state or not st.session_state.cache_name):
+                    with st.spinner("📦 Procesando expediente extenso y creando caché de contexto..."):
+                        cache_obj = crear_cache_contexto_si_aplica(client_temp, nombre_modelo, texto_adjuntos)
+                        if cache_obj:
+                            st.session_state.cache_name = cache_obj.name
+
                 while intentos < max_intentos:
                     try:
-                        response = client_temp.models.generate_content(
-                            model=nombre_modelo,
-                            contents=prompt_completo,
-                            config=types.GenerateContentConfig(
+                        if usar_cache and st.session_state.get("cache_name"):
+                            # Llamada con Caché (Lee el 100% de las demandas gigantes sin truncar)
+                            prompt_final = f"TAREA A REALIZAR:\n{prompt_tarea}\n\nNOTAS ADICIONALES DEL INGENIERO:\n{notas_usuario}"
+                            config_gen = types.GenerateContentConfig(
+                                cached_content=st.session_state.cache_name,
+                                temperature=0.2,
+                                max_output_tokens=2500,
+                            )
+                        else:
+                            # Llamada estándar con prompt recortado si los adjuntos son breves
+                            contexto_acotado = texto_adjuntos[:25000] if len(texto_adjuntos) > 25000 else texto_adjuntos
+                            prompt_final = f"TAREA A REALIZAR:\n{prompt_tarea}\n\nNOTAS DEL INGENIERO:\n{notas_usuario}\n\nDOCUMENTOS DE RESPALDO:\n{contexto_acotado}"
+                            config_gen = types.GenerateContentConfig(
                                 system_instruction=SYSTEM_GUARDRAILS_IDIEM,
                                 temperature=0.2,
                                 max_output_tokens=2500,
                             )
+
+                        response_stream = client_temp.models.generate_content_stream(
+                            model=nombre_modelo,
+                            contents=prompt_final,
+                            config=config_gen
                         )
-                        if response and response.text:
-                            # Se aplica la limpieza de Markdown y subcapítulos al texto generado
-                            return limpiar_formato_texto(response.text)
+
+                        texto_acumulado = ""
+                        for chunk in response_stream:
+                            if chunk.text:
+                                texto_acumulado += chunk.text
+                                placeholder_ui.markdown(texto_acumulado + "▌")
+
+                        texto_limpio = limpiar_formato_texto(texto_acumulado)
+                        placeholder_ui.markdown(texto_limpio)
+                        return texto_limpio
+
                     except Exception as model_err:
                         err_msg = str(model_err)
                         ultimo_error = err_msg
 
-                        # Control de error 503 (Servicio no disponible/Alta demanda): reintenta con backoff progresivo
                         if "503" in err_msg or "UNAVAILABLE" in err_msg or "overloaded" in err_msg.lower() or "high demand" in err_msg.lower():
                             intentos += 1
                             time.sleep(3 * intentos)
                             continue
 
-                        # Si la clave actual agotó su límite o cuota, salta inmediatamente a la siguiente clave
                         if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
                             break
 
@@ -165,7 +206,9 @@ def llamar_ia_gemini(prompt_tarea, contexto_usuario):
             ultimo_error = str(key_err)
             continue
 
-    return f"⚠️ Error al conectar con Gemini API (Claves o modelos agotados): {ultimo_error}"
+    msg_err = f"⚠️ Error al conectar con Gemini API (Claves o modelos agotados): {ultimo_error}"
+    placeholder_ui.error(msg_err)
+    return ""
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
@@ -304,6 +347,8 @@ with tab2:
         st.session_state.auto_actividades = ""
     if "texto_adjuntos" not in st.session_state:
         st.session_state.texto_adjuntos = ""
+    if "cache_name" not in st.session_state:
+        st.session_state.cache_name = None
 
     # --- MÓDULO DE CARGA DE ARCHIVOS DE RESPALDO ---
     st.markdown("#### 📁 Cargar Documentos de Respaldo (Demanda, Correos, EETT, etc.)")
@@ -323,7 +368,13 @@ with tab2:
                 txt = ""
             texto_extraido_total.append(f"--- INICIO DOCUMENTO: {file.name} ---\n{txt}\n--- FIN DOCUMENTO ---")
 
-        st.session_state.texto_adjuntos = "\n\n".join(texto_extraido_total)
+        nuevo_texto = "\n\n".join(texto_extraido_total)
+        
+        # Si cambia el contenido subido, resetear la caché antigua
+        if nuevo_texto != st.session_state.texto_adjuntos:
+            st.session_state.texto_adjuntos = nuevo_texto
+            st.session_state.cache_name = None
+
         st.success(f"¡Se han procesado {len(uploaded_files)} archivo(s) correctamente!")
 
     st.markdown("---")
@@ -340,8 +391,10 @@ with tab2:
     )
     st.session_state.text_intro = intro_input
 
-    def aplicar_pulido_cap4():
-        contexto_combinado = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\n\nNOTAS DEL INGENIERO:\n{st.session_state.text_intro}\n\nDOCUMENTOS DE RESPALDO LEÍDOS:\n{st.session_state.texto_adjuntos}"
+    placeholder_cap4 = st.empty()
+
+    if st.button("✨ Pulir y Desarrollar Capítulo 4 (Introducción con Adjuntos)"):
+        notas_combined = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\nNOTAS INGENIERO: {st.session_state.text_intro}"
         prompt_tarea = (
             "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' integrando los datos técnicos, contractuales y el contexto presente en los documentos subidos. "
             "Entrega varios párrafos ejecutivos bien estructurados en español formal. "
@@ -349,12 +402,11 @@ with tab2:
         )
 
         if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
-            with st.spinner("✨ Puliendo e integrando antecedentes en Capítulo 4..."):
-                texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
-                st.session_state.text_intro = texto_pulido
-                st.session_state.key_intro_area = texto_pulido
-
-    st.button("✨ Pulir y Desarrollar Capítulo 4 (Introducción con Adjuntos)", on_click=aplicar_pulido_cap4)
+            texto_generado = llamar_ia_gemini_stream(prompt_tarea, notas_combined, st.session_state.texto_adjuntos, placeholder_cap4)
+            if texto_generado:
+                st.session_state.text_intro = texto_generado
+                st.session_state.key_intro_area = texto_generado
+                st.rerun()
 
     st.markdown("---")
 
@@ -370,37 +422,39 @@ with tab2:
     )
     st.session_state.text_alcance = alcance_input
 
-    def aplicar_pulido_cap5():
-        contexto_combinado = f"NOTAS DEL ALCANCE:\n{st.session_state.text_alcance}\n\nDOCUMENTOS DE RESPALDO LEÍDOS:\n{st.session_state.texto_adjuntos}"
+    placeholder_cap5 = st.empty()
+
+    if st.button("✨ Pulir y Desarrollar Capítulo 5 (Alcance Detallado)"):
+        notas_combined = f"NOTAS DEL ALCANCE: {st.session_state.text_alcance}"
         prompt_tarea = (
             "Redacta el Capítulo 5 'Alcance Detallado' en español formal. Incluye un párrafo de encuadre inicial y luego formaliza las materias específicas a evaluar mediante viñetas ('•') con verbos en infinitivo, basándote en las reclamaciones reales descritas en los antecedentes. "
             "REGLA ESTRICTA DE FORMATO: No incluyas subcapítulos (ej: 5.1, 5.2), encabezados (#) ni caracteres '**'."
         )
 
         if st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
-            with st.spinner("✨ Puliendo e integrando Alcance en Capítulo 5..."):
-                texto_pulido = llamar_ia_gemini(prompt_tarea, contexto_combinado)
-                st.session_state.text_alcance = texto_pulido
-                st.session_state.key_alcance_area = texto_pulido
-
-    st.button("✨ Pulir y Desarrollar Capítulo 5 (Alcance Detallado)", on_click=aplicar_pulido_cap5)
+            texto_generado = llamar_ia_gemini_stream(prompt_tarea, notas_combined, st.session_state.texto_adjuntos, placeholder_cap5)
+            if texto_generado:
+                st.session_state.text_alcance = texto_generado
+                st.session_state.key_alcance_area = texto_generado
+                st.rerun()
 
     st.markdown("---")
     st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial IDIEM)")
 
-    def aplicar_generar_actividades():
-        contexto_combinado = f"CLIENTE: {cliente}\n\nINTRODUCCIÓN (CAP 4):\n{st.session_state.text_intro}\n\nALCANCE (CAP 5):\n{st.session_state.text_alcance}\n\nDOCUMENTOS DE RESPALDO LEÍDOS:\n{st.session_state.texto_adjuntos}"
+    placeholder_cap6 = st.empty()
+
+    if st.button("⚙️ Generar 6. Actividades Extensas"):
+        notas_combined = f"CLIENTE: {cliente}\nINTRODUCCIÓN (CAP 4): {st.session_state.text_intro}\nALCANCE (CAP 5): {st.session_state.text_alcance}"
         prompt_tarea = (
             "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' de forma estructurada. Estructúralo en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas minuciosamente a los puntos del alcance e hitos documentados. "
             "REGLA ESTRICTA DE FORMATO: No utilices símbolos de formato Markdown como '#', '##' ni '**'."
         )
 
         if st.session_state.text_intro.strip() or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
-            with st.spinner("⚙️ Generando Capítulo 6 con máximo detalle técnico..."):
-                actividades_gen = llamar_ia_gemini(prompt_tarea, contexto_combinado)
-                st.session_state.auto_actividades = actividades_gen
-
-    st.button("⚙️ Generar 6. Actividades Extensas", on_click=aplicar_generar_actividades)
+            texto_generado = llamar_ia_gemini_stream(prompt_tarea, notas_combined, st.session_state.texto_adjuntos, placeholder_cap6)
+            if texto_generado:
+                st.session_state.auto_actividades = texto_generado
+                st.rerun()
 
     st.markdown("---")
     actividades = st.text_area(
