@@ -1,4 +1,5 @@
 import os
+import time
 import datetime
 from io import BytesIO
 import streamlit as st
@@ -27,7 +28,7 @@ st.markdown("""
 # ---------------------------------------------------------
 def obtener_configuracion_gemini():
     keys = []
-    # ✅ Lista de modelos vigentes (serie 3.x). NO usar 2.5 ni anteriores.
+    # Lista de modelos vigentes (serie 3.x)
     models = [
         "gemini-3.8-flash",
         "gemini-3.7-flash",
@@ -82,7 +83,7 @@ def extraer_texto_docx(file_bytes):
         return f"[Error al leer DOCX: {str(e)}]"
 
 # ---------------------------------------------------------
-# PROMPT DEL SISTEMA Y LLAMADA A GEMINI CON ROTACIÓN
+# PROMPT DEL SISTEMA Y LLAMADA A GEMINI CON ROTACIÓN Y REINTENTOS
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
 Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
@@ -92,44 +93,58 @@ REGLAS DE ORO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
 3. PROFUNDIDAD Y REDACCIÓN EJECUTIVA: Amplía el texto desarrollando las ideas en párrafos formales de ingeniería, relacionando los datos del contrato, fechas y elementos técnicos presentes en los antecedentes. No te limites a corregir la ortografía; dale estructura profesional.
-4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
+4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda strictly prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
     if not api_keys:
         return "⚠️ Error: No se encontraron API Keys configuradas en st.secrets."
 
+    # Acotar context window preventivo para evitar timeouts en archivos pesados (máx 25.000 caracteres)
+    contexto_acotado = contexto_usuario[:25000] if len(contexto_usuario) > 25000 else contexto_usuario
+
     prompt_completo = (
         f"TAREA A REALIZAR:\n{prompt_tarea}\n\n"
-        f"ANTECEDENTES DEL CASO Y DOCUMENTOS ADJUNTOS:\n{contexto_usuario}"
+        f"ANTECEDENTES DEL CASO Y DOCUMENTOS ADJUNTOS:\n{contexto_acotado}"
     )
 
     ultimo_error = ""
 
-    # Bucle de rotación por clave y modelo
+    # Bucle de rotación por clave y modelo con manejo de reintentos para error 503
     for key in api_keys:
         try:
             client_temp = genai.Client(api_key=key)
             for nombre_modelo in modelos_disponibles:
-                try:
-                    response = client_temp.models.generate_content(
-                        model=nombre_modelo,
-                        contents=prompt_completo,
-                        config=types.GenerateContentConfig(
-                            system_instruction=SYSTEM_GUARDRAILS_IDIEM,
-                            temperature=0.2,
-                            max_output_tokens=4000,
+                intentos = 0
+                max_intentos = 3
+                while intentos < max_intentos:
+                    try:
+                        response = client_temp.models.generate_content(
+                            model=nombre_modelo,
+                            contents=prompt_completo,
+                            config=types.GenerateContentConfig(
+                                system_instruction=SYSTEM_GUARDRAILS_IDIEM,
+                                temperature=0.2,
+                                max_output_tokens=3000,
+                            )
                         )
-                    )
-                    if response and response.text:
-                        return response.text.strip()
-                except Exception as model_err:
-                    err_msg = str(model_err)
-                    ultimo_error = err_msg
-                    # Si la clave actual agotó su límite o cuota, salta inmediatamente a la siguiente clave
-                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                        if response and response.text:
+                            return response.text.strip()
+                    except Exception as model_err:
+                        err_msg = str(model_err)
+                        ultimo_error = err_msg
+
+                        # Control de error 503 (Servicio no disponible/Sobrecarga): reintenta con backoff
+                        if "503" in err_msg or "UNAVAILABLE" in err_msg or "overloaded" in err_msg.lower():
+                            intentos += 1
+                            time.sleep(2 * intentos)
+                            continue
+
+                        # Si la clave actual agotó su límite o cuota, salta inmediatamente a la siguiente clave
+                        if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                            break
+
                         break
-                    continue
         except Exception as key_err:
             ultimo_error = str(key_err)
             continue
