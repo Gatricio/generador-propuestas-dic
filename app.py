@@ -93,7 +93,7 @@ REGLAS DE ORO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
 3. PROFUNDIDAD Y REDACCIÓN EJECUTIVA: Amplía el texto desarrollando las ideas en párrafos formales de ingeniería, relacionando los datos del contrato, fechas y elementos técnicos presentes en los antecedentes. No te limites a corregir la ortografía; dale estructura profesional.
-4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda strictly prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
+4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
 def llamar_ia_gemini(prompt_tarea, contexto_usuario):
