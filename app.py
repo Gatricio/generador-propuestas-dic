@@ -101,7 +101,7 @@ REGLAS DE ORO DE REDACCIÓN Y FORMATO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
 3. ESTRUCTURA EN PÁRRAFOS CONTINUOS: Redacta exclusivamente en párrafos formales de ingeniería continuos y fluídos. Queda ESTRICTAMENTE PROHIBIDO el uso de subcapítulos (ej: 4.1, 4.2), títulos secundarios, encabezados (#, ##, ###) o caracteres de formato Markdown como asteriscos de negrita (**).
-4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
+4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda strictly prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
 def crear_cache_contexto_si_aplica(client, modelo, texto_documentos):
@@ -390,7 +390,7 @@ with tab2:
     st.markdown("##### 📌 Seleccione los Alcances Específicos a Evaluar:")
     st.caption("Marque únicamente las materias que aplican a esta propuesta.")
 
-    col_chk1, col_chk2, col_chk3 = st.columns(4)
+    col_chk1, col_chk2, col_chk3, col_chk4 = st.columns(4)
     with col_chk1:
         chk_plazos = st.checkbox("Plazos / Mayores Plazos", value=True)
         chk_gg = st.checkbox("Gastos Generales", value=True)
@@ -403,12 +403,12 @@ with tab2:
         chk_multas = st.checkbox("Multas / Sanciones")
         chk_accidente = st.checkbox("Accidentes / Siniestros")
         chk_adicionales = st.checkbox("Obras Adicionales / Obras Extraordinarias")
-with col_chk4:
+    with col_chk4:
         chk_productividad = st.checkbox("Productividad")
         chk_pertinencia = st.checkbox("Pertinencia de situaciones")
-           otros_alcances = st.text_input(
-                
-    "Otros Alcances Especiales (Opcional):",
+
+    otros_alcances = st.text_input(
+        "Otros Alcances Especiales (Opcional):",
         value="",
         placeholder="Ingrese otros puntos específicos de ingeniería contractual..."
     )
@@ -424,6 +424,8 @@ with col_chk4:
     if chk_multas: alcances_seleccionados.append("Multas / Sanciones Contractuales")
     if chk_accidente: alcances_seleccionados.append("Accidentes / Eventos Extraordinarios y Siniestros")
     if chk_adicionales: alcances_seleccionados.append("Obras Adicionales / Obras Nuevas")
+    if chk_productividad: alcances_seleccionados.append("Pérdida de Productividad / Rendimientos")
+    if chk_pertinencia: alcances_seleccionados.append("Pertinencia Técnica y Contractual de Reclamaciones")
     if otros_alcances.strip(): alcances_seleccionados.append(f"Otros Alcances Especiales: {otros_alcances.strip()}")
 
     str_lista_alcances = "\n".join([f"- {a}" for a in alcances_seleccionados])
