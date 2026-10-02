@@ -112,7 +112,6 @@ REGLAS DE ORO DE REDACCIÓN Y FORMATO:
 """
 
 def crear_cache_contexto_si_aplica(client, modelo, texto_documentos):
-    # Solo crear caché si el texto es suficientemente extenso (> 100.000 caracteres)
     if len(texto_documentos) < 100000:
         return None
     
@@ -122,7 +121,7 @@ def crear_cache_contexto_si_aplica(client, modelo, texto_documentos):
             config=types.CreateCachedContentConfig(
                 contents=[f"DOCUMENTOS DE RESPALDO Y EXPEDIENTES SUBIDOS:\n{texto_documentos}"],
                 system_instruction=SYSTEM_GUARDRAILS_IDIEM,
-                ttl="1800s" # Duración de 30 minutos en caché
+                ttl="1800s"
             )
         )
         return cache
@@ -143,7 +142,6 @@ def llamar_ia_gemini_stream(prompt_tarea, notas_usuario, texto_adjuntos, placeho
                 intentos = 0
                 max_intentos = 5
                 
-                # Evaluación de volumen para decidir si usar Caché o Prompt directo
                 usar_cache = len(texto_adjuntos) >= 100000
                 cache_obj = None
 
@@ -156,7 +154,6 @@ def llamar_ia_gemini_stream(prompt_tarea, notas_usuario, texto_adjuntos, placeho
                 while intentos < max_intentos:
                     try:
                         if usar_cache and st.session_state.get("cache_name"):
-                            # Llamada con Caché (Lee el 100% de las demandas gigantes sin truncar)
                             prompt_final = f"TAREA A REALIZAR:\n{prompt_tarea}\n\nNOTAS ADICIONALES DEL INGENIERO:\n{notas_usuario}"
                             config_gen = types.GenerateContentConfig(
                                 cached_content=st.session_state.cache_name,
@@ -164,7 +161,6 @@ def llamar_ia_gemini_stream(prompt_tarea, notas_usuario, texto_adjuntos, placeho
                                 max_output_tokens=2500,
                             )
                         else:
-                            # Llamada estándar con prompt recortado si los adjuntos son breves
                             contexto_acotado = texto_adjuntos[:25000] if len(texto_adjuntos) > 25000 else texto_adjuntos
                             prompt_final = f"TAREA A REALIZAR:\n{prompt_tarea}\n\nNOTAS DEL INGENIERO:\n{notas_usuario}\n\nDOCUMENTOS DE RESPALDO:\n{contexto_acotado}"
                             config_gen = types.GenerateContentConfig(
@@ -370,7 +366,6 @@ with tab2:
 
         nuevo_texto = "\n\n".join(texto_extraido_total)
         
-        # Si cambia el contenido subido, resetear la caché antigua
         if nuevo_texto != st.session_state.texto_adjuntos:
             st.session_state.texto_adjuntos = nuevo_texto
             st.session_state.cache_name = None
@@ -382,12 +377,12 @@ with tab2:
     # --- CAPÍTULO 4: INTRODUCCIÓN ---
     st.markdown("#### 4. Introducción / Contexto de la Obra")
 
+    # Eliminada la clave asignada internamente 'key="key_intro_area"' para corregir el StreamlitWidgetAlreadyInstantiatedError
     intro_input = st.text_area(
         "Ingrese antecedentes del contrato, obra y conflicto (o notas preliminares):",
         value=st.session_state.text_intro,
         placeholder="Ingrese borrador o notas del contexto...",
-        height=160,
-        key="key_intro_area"
+        height=160
     )
     st.session_state.text_intro = intro_input
 
@@ -405,7 +400,6 @@ with tab2:
             texto_generado = llamar_ia_gemini_stream(prompt_tarea, notas_combined, st.session_state.texto_adjuntos, placeholder_cap4)
             if texto_generado:
                 st.session_state.text_intro = texto_generado
-                st.session_state.key_intro_area = texto_generado
                 st.rerun()
 
     st.markdown("---")
@@ -413,12 +407,12 @@ with tab2:
     # --- CAPÍTULO 5: ALCANCE DETALLADO ---
     st.markdown("#### 5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba)")
 
+    # Eliminada la clave asignada internamente 'key="key_alcance_area"'
     alcance_input = st.text_area(
         "Ingrese el desglose de materias, reclamaciones o Puntos de Prueba:",
         value=st.session_state.text_alcance,
         placeholder="Ingrese borrador o lista de puntos de prueba...",
-        height=160,
-        key="key_alcance_area"
+        height=160
     )
     st.session_state.text_alcance = alcance_input
 
@@ -435,7 +429,6 @@ with tab2:
             texto_generado = llamar_ia_gemini_stream(prompt_tarea, notas_combined, st.session_state.texto_adjuntos, placeholder_cap5)
             if texto_generado:
                 st.session_state.text_alcance = texto_generado
-                st.session_state.key_alcance_area = texto_generado
                 st.rerun()
 
     st.markdown("---")
