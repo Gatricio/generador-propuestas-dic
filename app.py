@@ -21,6 +21,13 @@ st.markdown("""
     .main-header { font-size:24px; font-weight:bold; color:#002855; margin-bottom:2px; }
     .sub-header { font-size:14px; color:#555; margin-bottom: 20px; }
     .stButton>button { background-color: #0056B3; color: white; font-weight: bold; width: 100%; }
+    .plazo-card {
+        background-color: #F0F4F8;
+        border-left: 5px solid #002855;
+        padding: 15px 20px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -101,7 +108,7 @@ REGLAS DE ORO DE REDACCIÓN Y FORMATO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
 3. ESTRUCTURA EN PÁRRAFOS CONTINUOS: Redacta exclusivamente en párrafos formales de ingeniería continuos y fluídos. Queda ESTRICTAMENTE PROHIBIDO el uso de subcapítulos (ej: 4.1, 4.2), títulos secundarios, encabezados (#, ##, ###) o caracteres de formato Markdown como asteriscos de negrita (**).
-4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda strictly prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
+4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
 def crear_cache_contexto_si_aplica(client, modelo, texto_documentos):
@@ -384,51 +391,56 @@ with tab2:
 
     st.markdown("---")
 
-    # --- CAPÍTULO 5: ALCANCE DETALLADO Y SELECCIÓN DE MATERIAS ---
+    # --- CAPÍTULO 5: ALCANCE DETALLADO Y SELECCIÓN DE MATERIAS CON PRIORIDAD ESTABLECIDA ---
     st.markdown("#### 5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba)")
 
     st.markdown("##### 📌 Seleccione los Alcances Específicos a Evaluar:")
-    st.caption("Marque únicamente las materias que aplican a esta propuesta.")
+    st.caption("Marque únicamente las materias que aplican. La redacción seguirá estrictamente la secuencia jerárquica de prioridad técnica del 1 al 9.")
 
     col_chk1, col_chk2, col_chk3, col_chk4 = st.columns(4)
     with col_chk1:
-        chk_plazos = st.checkbox("Plazos / Mayores Plazos", value=True)
-        chk_gg = st.checkbox("Gastos Generales", value=True)
-        chk_utilidades = st.checkbox("Utilidades / Lucro Cesante")
+        chk_pertinencia = st.checkbox("1. Estudio de Pertinencia de Situaciones", value=True)
+        chk_ingenieria = st.checkbox("2. Estudio Técnico Ingeniería y Arquitectura")
+        chk_adicionales = st.checkbox("3. Obras Adicionales / Obras Extraordinarias")
     with col_chk2:
-        chk_ingenieria = st.checkbox("Ingeniería / Proyectos")
-        chk_arquitectura = st.checkbox("Revisión Arquitectura y/o EETT")
-        chk_cotizacion = st.checkbox("Cotización / Análisis de Precios")
+        chk_plazos = st.checkbox("4. Estudio de Impacto en Plazo", value=True)
+        chk_gg = st.checkbox("5a. Gastos Generales", value=True)
+        chk_utilidades = st.checkbox("5b. Utilidad / Lucro Cesante")
     with col_chk3:
-        chk_multas = st.checkbox("Multas / Sanciones")
-        chk_accidente = st.checkbox("Accidentes / Siniestros")
-        chk_adicionales = st.checkbox("Obras Adicionales / Obras Extraordinarias")
+        chk_multas = st.checkbox("5c. Multas / Sanciones Contractuales")
+        chk_accidente = st.checkbox("6. Accidentes / Siniestros")
+        chk_productividad = st.checkbox("7. Estudio de Pérdida de Productividad")
     with col_chk4:
-        chk_productividad = st.checkbox("Productividad")
-        chk_pertinencia = st.checkbox("Pertinencia de situaciones")
+        chk_cotizacion = st.checkbox("8. Cotización / Análisis de Precios")
 
     otros_alcances = st.text_input(
-        "Otros Alcances Especiales (Opcional):",
+        "9. Otros Alcances Especiales (Opcional):",
         value="",
         placeholder="Ingrese otros puntos específicos de ingeniería contractual..."
     )
 
-    # Construcción de la lista de alcances obligatorios para la IA
-    alcances_seleccionados = []
-    if chk_plazos: alcances_seleccionados.append("Plazos / Análisis de Mayores Plazos")
-    if chk_gg: alcances_seleccionados.append("Gastos Generales (Mayores Costos)")
-    if chk_utilidades: alcances_seleccionados.append("Utilidades / Lucro Cesante")
-    if chk_ingenieria: alcances_seleccionados.append("Ingeniería / Modificaciones de Proyecto")
-    if chk_arquitectura: alcances_seleccionados.append("Arquitectura / Especificaciones Técnicas (EETT)")
-    if chk_cotizacion: alcances_seleccionados.append("Cotización / Precios Unitarios y Presupuestos")
-    if chk_multas: alcances_seleccionados.append("Multas / Sanciones Contractuales")
-    if chk_accidente: alcances_seleccionados.append("Accidentes / Eventos Extraordinarios y Siniestros")
-    if chk_adicionales: alcances_seleccionados.append("Obras Adicionales / Obras Nuevas")
-    if chk_productividad: alcances_seleccionados.append("Pérdida de Productividad / Rendimientos")
-    if chk_pertinencia: alcances_seleccionados.append("Pertinencia Técnica y Contractual de Reclamaciones")
-    if otros_alcances.strip(): alcances_seleccionados.append(f"Otros Alcances Especiales: {otros_alcances.strip()}")
+    # Construcción ordenada respetando la secuencia estricta de prioridad 1 a 9
+    alcances_ordenados = []
+    if chk_pertinencia: alcances_ordenados.append("1. Estudio de pertinencia de situaciones.")
+    if chk_ingenieria: alcances_ordenados.append("2. Estudio técnico ingeniería y arquitectura.")
+    if chk_adicionales: alcances_ordenados.append("3. Obras Adicionales / Obras Extraordinarias.")
+    if chk_plazos: alcances_ordenados.append("4. Estudio de impacto en plazo.")
+    
+    # Consolidación de Costos (Punto 5)
+    costos_subitems = []
+    if chk_gg: costos_subitems.append("Gastos Generales")
+    if chk_utilidades: costos_subitems.append("Utilidad/Lucro Cesante")
+    if chk_multas: costos_subitems.append("Multas")
+    if costos_subitems:
+        str_costos = ", ".join(costos_subitems)
+        alcances_ordenados.append(f"5. Estudio de impacto en costo ({str_costos}).")
 
-    str_lista_alcances = "\n".join([f"- {a}" for a in alcances_seleccionados])
+    if chk_accidente: alcances_ordenados.append("6. Accidentes / Siniestros.")
+    if chk_productividad: alcances_ordenados.append("7. Estudio de pérdida de productividad.")
+    if chk_cotizacion: alcances_ordenados.append("8. Cotización / Análisis de Precios.")
+    if otros_alcances.strip(): alcances_ordenados.append(f"9. Otros Alcances Especiales: {otros_alcances.strip()}")
+
+    str_lista_alcances = "\n".join([f"{a}" for a in alcances_ordenados])
 
     alcance_input = st.text_area(
         "Ingrese notas adicionales para el alcance (o borrador complementario):",
@@ -440,17 +452,17 @@ with tab2:
 
     if st.button("✨ Pulir y Desarrollar Capítulo 5 (Alcance Detallado)"):
         notas_combined = (
-            f"MATERIAS Y ALCANCES SELECCIONADOS POR EL USUARIO (OBLIGATORIO DESARROLLAR SOLO ESTOS):\n{str_lista_alcances}\n\n"
+            f"SECUENCIA JERÁRQUICA DE PRIORIDAD PARA REDACCIÓN (RESPECTAR ESTRICTAMENTE ESTE ORDEN DE PRESENTACIÓN):\n{str_lista_alcances}\n\n"
             f"NOTAS ADICIONALES DEL ALCANCE:\n{st.session_state.text_alcance}"
         )
         prompt_tarea = (
             "Redacta el Capítulo 5 'Alcance Detallado' en español formal. Incluye un párrafo de encuadre inicial y luego formaliza las materias seleccionadas mediante viñetas ('•') con verbos en infinitivo. "
-            "REGLA CRÍTICA: Centra la redacción ÚNICAMENTE en las materias expresamente indicadas en la lista de alcances seleccionados. NO agregues otras materias ni 'imagines' alcances no marcados. "
+            "REGLA CRÍTICA DE PRIORIDAD: Presenta y desarrolla los puntos del alcance en el ORDEN SECUENCIAL ESTRICTO indicado (del punto 1 al punto 9). NO alteres el orden jerárquico establecido ni agregues materias no seleccionadas. "
             "REGLA ESTRICTA DE FORMATO: No incluyas subcapítulos (ej: 5.1, 5.2), encabezados (#) ni caracteres '**'."
         )
 
-        if alcances_seleccionados or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
-            with st.spinner("✨ Puliendo e integrando Alcance en Capítulo 5..."):
+        if alcances_ordenados or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
+            with st.spinner("✨ Puliendo e integrando Alcance en Capítulo 5 según secuencia jerárquica..."):
                 texto_generado = llamar_ia_gemini(prompt_tarea, notas_combined, st.session_state.texto_adjuntos)
                 if texto_generado and not texto_generado.startswith("⚠️"):
                     st.session_state.text_alcance = texto_generado
@@ -481,11 +493,30 @@ with tab2:
     )
 
 # ---------------------------------------------------------
-# PESTAÑA 3: HORAS HOMBRE Y PERFILES
+# PESTAÑA 3: HORAS HOMBRE Y PERFILES CON TARJETA DESTACADA DE PLAZO
 # ---------------------------------------------------------
 with tab3:
     st.subheader("Estimación de Recursos y Perfiles Profesionales")
-    meses_val = st.number_input("Plazo Total del Estudio (Meses):", min_value=0.5, step=0.5, value=1.0)
+
+    # Módulo visual destacado para la asignación del plazo total
+    st.markdown("""
+        <div class="plazo-card">
+            <h4 style="margin:0; color:#002855;">⏱️ PLAZO TOTAL DEL ESTUDIO PERICIAL</h4>
+            <p style="margin:2px 0 10px 0; font-size:13px; color:#555;">Ingrese la duración estimada en meses para el desarrollo integral del encargo pericial.</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col_p1, col_p2 = st.columns([1, 2])
+    with col_p1:
+        meses_val = st.number_input(
+            "Plazo Total del Estudio (Meses):",
+            min_value=0.5,
+            step=0.5,
+            value=1.0,
+            help="Este parámetro escala automáticamente las Horas Hombre (HH) totales y el presupuesto final en UF."
+        )
+
+    st.markdown("---")
 
     col_hdr1, col_hdr2, col_hdr3 = st.columns([2, 1, 1])
     with col_hdr1: st.markdown("**Categoría Profesional**")
