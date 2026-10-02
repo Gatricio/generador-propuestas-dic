@@ -397,13 +397,16 @@ with tab2:
         chk_utilidades = st.checkbox("Utilidades / Lucro Cesante")
     with col_chk2:
         chk_ingenieria = st.checkbox("Ingeniería / Proyectos")
-        chk_arquitectura = st.checkbox("Arquitectura / EETT")
+        chk_arquitectura = st.checkbox("Revisión Arquitectura y/o EETT")
         chk_cotizacion = st.checkbox("Cotización / Análisis de Precios")
     with col_chk3:
         chk_multas = st.checkbox("Multas / Sanciones")
         chk_accidente = st.checkbox("Accidentes / Siniestros")
         chk_adicionales = st.checkbox("Obras Adicionales / Obras Extraordinarias")
-
+with col_chk4:
+        chk_productividad = st.checkbox("Productividad")
+        chk_pertinencia = st.checkbox("Pertinencia de situaciones")
+       
     otros_alcances = st.text_input(
         "Otros Alcances Especiales (Opcional):",
         value="",
