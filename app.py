@@ -388,7 +388,7 @@ with tab2:
     st.markdown("#### 5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba)")
 
     st.markdown("##### 📌 Seleccione los Alcances Específicos a Evaluar:")
-    st.caption("Marque únicamente las materias que aplican a esta propuesta. La IA enfocará la redacción estrictamente en las opciones seleccionadas.")
+    st.caption("Marque únicamente las materias que aplican a esta propuesta.")
 
     col_chk1, col_chk2, col_chk3 = st.columns(3)
     with col_chk1:
