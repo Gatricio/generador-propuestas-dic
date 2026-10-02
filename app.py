@@ -29,14 +29,12 @@ st.markdown("""
 # ---------------------------------------------------------
 def obtener_configuracion_gemini():
     keys = []
-    # Lista de modelos vigentes (serie 3.x)
     models = [
         "gemini-3.8-flash",
         "gemini-3.7-flash",
         "gemini-3.6-flash",
     ]
 
-    # 1. Lectura desde el bloque [gemini] en secrets.toml
     if "gemini" in st.secrets:
         gemini_sec = st.secrets["gemini"]
         if "api_keys" in gemini_sec and isinstance(gemini_sec["api_keys"], list):
@@ -44,13 +42,11 @@ def obtener_configuracion_gemini():
         if "models" in gemini_sec and isinstance(gemini_sec["models"], list):
             models = [m.strip() for m in gemini_sec["models"] if m.strip()]
 
-    # 2. Respaldo para lista en la raíz
     elif "GEMINI_API_KEYS" in st.secrets:
         raw_keys = st.secrets["GEMINI_API_KEYS"]
         if isinstance(raw_keys, list):
             keys = [k.strip() for k in raw_keys if k.strip()]
 
-    # 3. Respaldo para clave individual clásica
     if not keys:
         single_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
         if single_key:
@@ -89,16 +85,13 @@ def extraer_texto_docx(file_bytes):
 def limpiar_formato_texto(texto):
     if not texto:
         return ""
-    # Eliminar símbolos de negrita o cursiva de Markdown (*)
     texto = texto.replace("**", "").replace("*", "")
-    # Eliminar encabezados tipo Markdown (#)
     texto = re.sub(r'#+\s*', '', texto)
-    # Eliminar subcapítulos o numeraciones al inicio de párrafo (ej: 4.1, 4.2, 4.1.1)
     texto = re.sub(r'^\s*\d+(\.\d+)+\s*', '', texto, flags=re.MULTILINE)
     return texto.strip()
 
 # ---------------------------------------------------------
-# PROMPT DEL SISTEMA Y GESTIÓN DE CACHÉ DE CONTEXTO
+# PROMPT DEL SISTEMA Y LLAMADA A GEMINI LOTE COMPLETO
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
 Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
@@ -128,10 +121,9 @@ def crear_cache_contexto_si_aplica(client, modelo, texto_documentos):
     except Exception:
         return None
 
-def llamar_ia_gemini_stream(prompt_tarea, notas_usuario, texto_adjuntos, placeholder_ui):
+def llamar_ia_gemini(prompt_tarea, notas_usuario, texto_adjuntos):
     if not api_keys:
-        placeholder_ui.error("⚠️ Error: No se encontraron API Keys configuradas en st.secrets.")
-        return ""
+        return "⚠️ Error: No se encontraron API Keys configuradas en st.secrets."
 
     ultimo_error = ""
 
@@ -146,10 +138,9 @@ def llamar_ia_gemini_stream(prompt_tarea, notas_usuario, texto_adjuntos, placeho
                 cache_obj = None
 
                 if usar_cache and ("cache_name" not in st.session_state or not st.session_state.cache_name):
-                    with st.spinner("📦 Procesando expediente extenso y creando caché de contexto..."):
-                        cache_obj = crear_cache_contexto_si_aplica(client_temp, nombre_modelo, texto_adjuntos)
-                        if cache_obj:
-                            st.session_state.cache_name = cache_obj.name
+                    cache_obj = crear_cache_contexto_si_aplica(client_temp, nombre_modelo, texto_adjuntos)
+                    if cache_obj:
+                        st.session_state.cache_name = cache_obj.name
 
                 while intentos < max_intentos:
                     try:
@@ -169,21 +160,14 @@ def llamar_ia_gemini_stream(prompt_tarea, notas_usuario, texto_adjuntos, placeho
                                 max_output_tokens=2500,
                             )
 
-                        response_stream = client_temp.models.generate_content_stream(
+                        response = client_temp.models.generate_content(
                             model=nombre_modelo,
                             contents=prompt_final,
                             config=config_gen
                         )
 
-                        texto_acumulado = ""
-                        for chunk in response_stream:
-                            if chunk.text:
-                                texto_acumulado += chunk.text
-                                placeholder_ui.markdown(texto_acumulado + "▌")
-
-                        texto_limpio = limpiar_formato_texto(texto_acumulado)
-                        placeholder_ui.markdown(texto_limpio)
-                        return texto_limpio
+                        if response and response.text:
+                            return limpiar_formato_texto(response.text)
 
                     except Exception as model_err:
                         err_msg = str(model_err)
@@ -202,9 +186,7 @@ def llamar_ia_gemini_stream(prompt_tarea, notas_usuario, texto_adjuntos, placeho
             ultimo_error = str(key_err)
             continue
 
-    msg_err = f"⚠️ Error al conectar con Gemini API (Claves o modelos agotados): {ultimo_error}"
-    placeholder_ui.error(msg_err)
-    return ""
+    return f"⚠️ Error al conectar con Gemini API (Claves o modelos agotados): {ultimo_error}"
 
 # ---------------------------------------------------------
 # FUNCIÓN: CONVERSIÓN DE NÚMEROS A PALABRAS EN ESPAÑOL (UF)
@@ -377,7 +359,6 @@ with tab2:
     # --- CAPÍTULO 4: INTRODUCCIÓN ---
     st.markdown("#### 4. Introducción / Contexto de la Obra")
 
-    # Eliminada la clave asignada internamente 'key="key_intro_area"' para corregir el StreamlitWidgetAlreadyInstantiatedError
     intro_input = st.text_area(
         "Ingrese antecedentes del contrato, obra y conflicto (o notas preliminares):",
         value=st.session_state.text_intro,
@@ -385,8 +366,6 @@ with tab2:
         height=160
     )
     st.session_state.text_intro = intro_input
-
-    placeholder_cap4 = st.empty()
 
     if st.button("✨ Pulir y Desarrollar Capítulo 4 (Introducción con Adjuntos)"):
         notas_combined = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\nNOTAS INGENIERO: {st.session_state.text_intro}"
@@ -397,44 +376,83 @@ with tab2:
         )
 
         if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
-            texto_generado = llamar_ia_gemini_stream(prompt_tarea, notas_combined, st.session_state.texto_adjuntos, placeholder_cap4)
-            if texto_generado:
-                st.session_state.text_intro = texto_generado
-                st.rerun()
+            with st.spinner("✨ Puliendo e integrando antecedentes en Capítulo 4..."):
+                texto_generado = llamar_ia_gemini(prompt_tarea, notas_combined, st.session_state.texto_adjuntos)
+                if texto_generado and not texto_generado.startswith("⚠️"):
+                    st.session_state.text_intro = texto_generado
+                    st.rerun()
 
     st.markdown("---")
 
-    # --- CAPÍTULO 5: ALCANCE DETALLADO ---
+    # --- CAPÍTULO 5: ALCANCE DETALLADO Y SELECCIÓN DE MATERIAS ---
     st.markdown("#### 5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba)")
 
-    # Eliminada la clave asignada internamente 'key="key_alcance_area"'
+    st.markdown("##### 📌 Seleccione los Alcances Específicos a Evaluar:")
+    st.caption("Marque únicamente las materias que aplican a esta propuesta. La IA enfocará la redacción estrictamente en las opciones seleccionadas.")
+
+    col_chk1, col_chk2, col_chk3 = st.columns(3)
+    with col_chk1:
+        chk_plazos = st.checkbox("Plazos / Mayores Plazos", value=True)
+        chk_gg = st.checkbox("Gastos Generales", value=True)
+        chk_utilidades = st.checkbox("Utilidades / Lucro Cesante")
+    with col_chk2:
+        chk_ingenieria = st.checkbox("Ingeniería / Proyectos")
+        chk_arquitectura = st.checkbox("Arquitectura / EETT")
+        chk_cotizacion = st.checkbox("Cotización / Análisis de Precios")
+    with col_chk3:
+        chk_multas = st.checkbox("Multas / Sanciones")
+        chk_accidente = st.checkbox("Accidentes / Siniestros")
+        chk_adicionales = st.checkbox("Obras Adicionales / Malla Crítica")
+
+    otros_alcances = st.text_input(
+        "Otros Alcances Especiales (Opcional):",
+        value="",
+        placeholder="Ingrese otros puntos específicos de ingeniería contractual..."
+    )
+
+    # Construcción de la lista de alcances obligatorios para la IA
+    alcances_seleccionados = []
+    if chk_plazos: alcances_seleccionados.append("Plazos / Análisis de Mayores Plazos")
+    if chk_gg: alcances_seleccionados.append("Gastos Generales (Mayores Costos)")
+    if chk_utilidades: alcances_seleccionados.append("Utilidades / Lucro Cesante")
+    if chk_ingenieria: alcances_seleccionados.append("Ingeniería / Modificaciones de Proyecto")
+    if chk_arquitectura: alcances_seleccionados.append("Arquitectura / Especificaciones Técnicas (EETT)")
+    if chk_cotizacion: alcances_seleccionados.append("Cotización / Precios Unitarios y Presupuestos")
+    if chk_multas: alcances_seleccionados.append("Multas / Sanciones Contractuales")
+    if chk_accidente: alcances_seleccionados.append("Accidentes / Eventos Extraordinarios y Siniestros")
+    if chk_adicionales: alcances_seleccionados.append("Obras Adicionales / Obras Nuevas")
+    if otros_alcances.strip(): alcances_seleccionados.append(f"Otros Alcances Especiales: {otros_alcances.strip()}")
+
+    str_lista_alcances = "\n".join([f"- {a}" for a in alcances_seleccionados])
+
     alcance_input = st.text_area(
-        "Ingrese el desglose de materias, reclamaciones o Puntos de Prueba:",
+        "Ingrese notas adicionales para el alcance (o borrador complementario):",
         value=st.session_state.text_alcance,
-        placeholder="Ingrese borrador o lista de puntos de prueba...",
-        height=160
+        placeholder="Ingrese notas específicas del alcance...",
+        height=140
     )
     st.session_state.text_alcance = alcance_input
 
-    placeholder_cap5 = st.empty()
-
     if st.button("✨ Pulir y Desarrollar Capítulo 5 (Alcance Detallado)"):
-        notas_combined = f"NOTAS DEL ALCANCE: {st.session_state.text_alcance}"
+        notas_combined = (
+            f"MATERIAS Y ALCANCES SELECCIONADOS POR EL USUARIO (OBLIGATORIO DESARROLLAR SOLO ESTOS):\n{str_lista_alcances}\n\n"
+            f"NOTAS ADICIONALES DEL ALCANCE:\n{st.session_state.text_alcance}"
+        )
         prompt_tarea = (
-            "Redacta el Capítulo 5 'Alcance Detallado' en español formal. Incluye un párrafo de encuadre inicial y luego formaliza las materias específicas a evaluar mediante viñetas ('•') con verbos en infinitivo, basándote en las reclamaciones reales descritas en los antecedentes. "
+            "Redacta el Capítulo 5 'Alcance Detallado' en español formal. Incluye un párrafo de encuadre inicial y luego formaliza las materias seleccionadas mediante viñetas ('•') con verbos en infinitivo. "
+            "REGLA CRÍTICA: Centra la redacción ÚNICAMENTE en las materias expresamente indicadas en la lista de alcances seleccionados. NO agregues otras materias ni 'imagines' alcances no marcados. "
             "REGLA ESTRICTA DE FORMATO: No incluyas subcapítulos (ej: 5.1, 5.2), encabezados (#) ni caracteres '**'."
         )
 
-        if st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
-            texto_generado = llamar_ia_gemini_stream(prompt_tarea, notas_combined, st.session_state.texto_adjuntos, placeholder_cap5)
-            if texto_generado:
-                st.session_state.text_alcance = texto_generado
-                st.rerun()
+        if alcances_seleccionados or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
+            with st.spinner("✨ Puliendo e integrando Alcance en Capítulo 5..."):
+                texto_generado = llamar_ia_gemini(prompt_tarea, notas_combined, st.session_state.texto_adjuntos)
+                if texto_generado and not texto_generado.startswith("⚠️"):
+                    st.session_state.text_alcance = texto_generado
+                    st.rerun()
 
     st.markdown("---")
     st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial IDIEM)")
-
-    placeholder_cap6 = st.empty()
 
     if st.button("⚙️ Generar 6. Actividades Extensas"):
         notas_combined = f"CLIENTE: {cliente}\nINTRODUCCIÓN (CAP 4): {st.session_state.text_intro}\nALCANCE (CAP 5): {st.session_state.text_alcance}"
@@ -444,10 +462,11 @@ with tab2:
         )
 
         if st.session_state.text_intro.strip() or st.session_state.text_alcance.strip() or st.session_state.texto_adjuntos.strip():
-            texto_generado = llamar_ia_gemini_stream(prompt_tarea, notas_combined, st.session_state.texto_adjuntos, placeholder_cap6)
-            if texto_generado:
-                st.session_state.auto_actividades = texto_generado
-                st.rerun()
+            with st.spinner("⚙️ Generando Capítulo 6 con máximo detalle técnico..."):
+                texto_generado = llamar_ia_gemini(prompt_tarea, notas_combined, st.session_state.texto_adjuntos)
+                if texto_generado and not texto_generado.startswith("⚠️"):
+                    st.session_state.auto_actividades = texto_generado
+                    st.rerun()
 
     st.markdown("---")
     actividades = st.text_area(
