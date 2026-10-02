@@ -402,7 +402,7 @@ with tab2:
     with col_chk3:
         chk_multas = st.checkbox("Multas / Sanciones")
         chk_accidente = st.checkbox("Accidentes / Siniestros")
-        chk_adicionales = st.checkbox("Obras Adicionales / Malla Crítica")
+        chk_adicionales = st.checkbox("Obras Adicionales / Obras Extraordinarias")
 
     otros_alcances = st.text_input(
         "Otros Alcances Especiales (Opcional):",
