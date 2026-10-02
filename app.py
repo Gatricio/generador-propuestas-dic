@@ -406,8 +406,7 @@ with tab2:
 with col_chk4:
         chk_productividad = st.checkbox("Productividad")
         chk_pertinencia = st.checkbox("Pertinencia de situaciones")
-       
-    otros_alcances = st.text_input(
+           otros_alcances = st.text_input(
         "Otros Alcances Especiales (Opcional):",
         value="",
         placeholder="Ingrese otros puntos específicos de ingeniería contractual..."
