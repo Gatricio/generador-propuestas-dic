@@ -399,19 +399,19 @@ with tab2:
 
     col_chk1, col_chk2, col_chk3, col_chk4 = st.columns(4)
     with col_chk1:
-        chk_pertinencia = st.checkbox("1. Estudio de Pertinencia de Situaciones", value=True)
-        chk_ingenieria = st.checkbox("2. Estudio Técnico Ingeniería y Arquitectura")
-        chk_adicionales = st.checkbox("3. Obras Adicionales / Obras Extraordinarias")
+        chk_pertinencia = st.checkbox("Estudio de Pertinencia de Situaciones", value=True)
+        chk_ingenieria = st.checkbox("Estudio Técnico Ingeniería y Arquitectura")
+        chk_adicionales = st.checkbox("Obras Adicionales / Obras Extraordinarias")
     with col_chk2:
-        chk_plazos = st.checkbox("4. Estudio de Impacto en Plazo", value=True)
-        chk_gg = st.checkbox("5a. Gastos Generales", value=True)
-        chk_utilidades = st.checkbox("5b. Utilidad / Lucro Cesante")
+        chk_plazos = st.checkbox("Estudio de Impacto en Plazo", value=True)
+        chk_gg = st.checkbox("Gastos Generales", value=True)
+        chk_utilidades = st.checkbox("Utilidad / Lucro Cesante")
     with col_chk3:
-        chk_multas = st.checkbox("5c. Multas / Sanciones Contractuales")
-        chk_accidente = st.checkbox("6. Accidentes / Siniestros")
-        chk_productividad = st.checkbox("7. Estudio de Pérdida de Productividad")
+        chk_multas = st.checkbox("Multas / Sanciones Contractuales")
+        chk_accidente = st.checkbox("Accidentes / Siniestros")
+        chk_productividad = st.checkbox("Estudio de Pérdida de Productividad")
     with col_chk4:
-        chk_cotizacion = st.checkbox("8. Cotización / Análisis de Precios")
+        chk_cotizacion = st.checkbox("Cotización / Análisis de Precios")
 
     otros_alcances = st.text_input(
         "9. Otros Alcances Especiales (Opcional):",
