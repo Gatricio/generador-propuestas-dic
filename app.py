@@ -101,14 +101,15 @@ def limpiar_formato_texto(texto):
 # PROMPT DEL SISTEMA Y LLAMADA A GEMINI LOTE COMPLETO
 # ---------------------------------------------------------
 SYSTEM_GUARDRAILS_IDIEM = """
-Eres un Ingeniero Perito Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
-Tu objetivo es redactar propuestas técnicas e informes periciales con el máximo rigor de ingeniería, neutralidad y objetividad.
+Eres un Ingeniero Especialista Senior de la División de Ingeniería Contractual de IDIEM (Universidad de Chile).
+Tu objetivo es redactar propuestas técnicas e informes con el máximo rigor de ingeniería, neutralidad y objetividad.
 
 REGLAS DE ORO DE REDACCIÓN Y FORMATO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
-3. ESTRUCTURA EN PÁRRAFOS CONTINUOS: Redacta exclusivamente en párrafos formales de ingeniería continuos y fluídos. Queda ESTRICTAMENTE PROHIBIDO el uso de subcapítulos (ej: 4.1, 4.2), títulos secundarios, encabezados (#, ##, ###) o caracteres de formato Markdown como asteriscos de negrita (**).
-4. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
+3. PROHIBICIÓN DE ANÁLISIS O CITAS JURÍDICAS/NORMATIVAS: Mantén el foco 100% en ingeniería civil y contractual. Queda estrictamente prohibido citar artículos de leyes, códigos legales, jurisprudencia o emitir juicios de derecho. Limítate a evaluar aspectos técnicos, físicos, financieros, presupuestarios y de plazo.
+4. ESTRUCTURA EN PÁRRAFOS CONTINUOS: Redacta exclusivamente en párrafos formales de ingeniería continuos y fluídos. Queda ESTRICTAMENTE PROHIBIDO el uso de subcapítulos (ej: 4.1, 4.2), títulos secundarios, encabezados (#, ##, ###) o caracteres de formato Markdown como asteriscos de negrita (**).
+5. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
 def crear_cache_contexto_si_aplica(client, modelo, texto_documentos):
@@ -375,17 +376,26 @@ with tab2:
     st.session_state.text_intro = intro_input
 
     if st.button("✨ Pulir y Desarrollar Capítulo 4 (Introducción con Adjuntos)"):
-        notas_combined = f"CLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\nNOTAS INGENIERO: {st.session_state.text_intro}"
+        # Regla de vocabulario según tipo de encargo
+        es_peritaje = "Peritaje" in tipo_encargo
+        regla_vocabulario = (
+            "Utiliza terminología pericial formal (peritaje, perito, dictamen pericial)."
+            if es_peritaje else
+            "Queda ESTRICTAMENTE PROHIBIDO usar las palabras 'peritaje', 'perito' o 'dictamen'. Utiliza únicamente 'informe técnico', 'estudio técnico', 'revisión contractual' o 'asesoría'."
+        )
+
+        notas_combined = f"TIPO DE ENCARGO: {tipo_encargo}\nCLIENTE: {cliente}\nNOMBRE PROPUESTA: {nombre_propuesta}\nNOTAS INGENIERO: {st.session_state.text_intro}"
         prompt_tarea = (
-            "Redacta el Capítulo 4 'Introducción / Contexto de la Obra' integrando los datos técnicos, contractuales y el contexto presente en los documentos subidos. "
-            "Entrega varios párrafos ejecutivos bien estructurados en español formal. "
+            f"Redacta el Capítulo 4 'Introducción / Contexto de la Obra' integrando los datos técnicos, contractuales y el contexto presente en los documentos subidos. "
+            f"REGLA DE VOCABULARIO: {regla_vocabulario} "
+            "REGLA DE NO CITAR LEYES: No cites normas legales, artículos de ley ni realices interpretaciones jurídicas. Limítate al contexto técnico-contractual de ingeniería. "
             "REGLA ESTRICTA DE FORMATO: Redacta únicamente en párrafos continuos. Está PROHIBIDO incluir subcapítulos (como 4.1, 4.2), subtítulos, títulos secundarios, caracteres '#' o negritas con '**'."
         )
 
         if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("✨ Puliendo e integrando antecedentes en Capítulo 4..."):
                 texto_generado = llamar_ia_gemini(prompt_tarea, notas_combined, st.session_state.texto_adjuntos)
-                if texto_generado and not texto_generado.startswith("⚠️"):
+                if texto_generado and not texto_generado.startswith("⚠️️"):
                     st.session_state.text_intro = texto_generado
                     st.rerun()
 
@@ -399,19 +409,19 @@ with tab2:
 
     col_chk1, col_chk2, col_chk3, col_chk4 = st.columns(4)
     with col_chk1:
-        chk_pertinencia = st.checkbox("Estudio de Pertinencia de Situaciones", value=True)
-        chk_ingenieria = st.checkbox("Estudio Técnico Ingeniería y Arquitectura")
-        chk_adicionales = st.checkbox("Obras Adicionales / Obras Extraordinarias")
+        chk_pertinencia = st.checkbox("1. Estudio de Pertinencia de Situaciones", value=True)
+        chk_ingenieria = st.checkbox("2. Estudio Técnico Ingeniería y Arquitectura")
+        chk_adicionales = st.checkbox("3. Obras Adicionales / Obras Extraordinarias")
     with col_chk2:
-        chk_plazos = st.checkbox("Estudio de Impacto en Plazo", value=True)
-        chk_gg = st.checkbox("Gastos Generales", value=True)
-        chk_utilidades = st.checkbox("Utilidad / Lucro Cesante")
+        chk_plazos = st.checkbox("4. Estudio de Impacto en Plazo", value=True)
+        chk_gg = st.checkbox("5a. Gastos Generales", value=True)
+        chk_utilidades = st.checkbox("5b. Utilidad / Lucro Cesante")
     with col_chk3:
-        chk_multas = st.checkbox("Multas / Sanciones Contractuales")
-        chk_accidente = st.checkbox("Accidentes / Siniestros")
-        chk_productividad = st.checkbox("Estudio de Pérdida de Productividad")
+        chk_multas = st.checkbox("5c. Multas / Sanciones Contractuales")
+        chk_accidente = st.checkbox("6. Accidentes / Siniestros")
+        chk_productividad = st.checkbox("7. Estudio de Pérdida de Productividad")
     with col_chk4:
-        chk_cotizacion = st.checkbox("Cotización / Análisis de Precios")
+        chk_cotizacion = st.checkbox("8. Cotización / Análisis de Precios")
 
     otros_alcances = st.text_input(
         "9. Otros Alcances Especiales (Opcional):",
@@ -451,12 +461,22 @@ with tab2:
     st.session_state.text_alcance = alcance_input
 
     if st.button("✨ Pulir y Desarrollar Capítulo 5 (Alcance Detallado)"):
+        es_peritaje = "Peritaje" in tipo_encargo
+        regla_vocabulario = (
+            "Utiliza terminología pericial formal (peritaje, perito, puntos de prueba)."
+            if es_peritaje else
+            "Queda ESTRICTAMENTE PROHIBIDO usar las palabras 'peritaje', 'perito', 'puntos de prueba' o 'dictamen'. Utiliza únicamente 'estudio técnico', 'alcance de la revisión', 'materias a evaluar' o 'análisis contractual'."
+        )
+
         notas_combined = (
+            f"TIPO DE ENCARGO: {tipo_encargo}\n"
             f"SECUENCIA JERÁRQUICA DE PRIORIDAD PARA REDACCIÓN (RESPECTAR ESTRICTAMENTE ESTE ORDEN DE PRESENTACIÓN):\n{str_lista_alcances}\n\n"
             f"NOTAS ADICIONALES DEL ALCANCE:\n{st.session_state.text_alcance}"
         )
         prompt_tarea = (
             "Redacta el Capítulo 5 'Alcance Detallado' en español formal. Incluye un párrafo de encuadre inicial y luego formaliza las materias seleccionadas mediante viñetas ('•') con verbos en infinitivo. "
+            f"REGLA DE VOCABULARIO: {regla_vocabulario} "
+            "REGLA DE NO CITAR LEYES: No cites leyes, códigos legales ni normas de derecho. Enfócate exclusivamente en aspectos empíricos de ingeniería. "
             "REGLA CRÍTICA DE PRIORIDAD: Presenta y desarrolla los puntos del alcance en el ORDEN SECUENCIAL ESTRICTO indicado (del punto 1 al punto 9). NO alteres el orden jerárquico establecido ni agregues materias no seleccionadas. "
             "REGLA ESTRICTA DE FORMATO: No incluyas subcapítulos (ej: 5.1, 5.2), encabezados (#) ni caracteres '**'."
         )
@@ -472,9 +492,18 @@ with tab2:
     st.markdown("### ⚡ Generación Extensa de Actividades (Estándar Pericial IDIEM)")
 
     if st.button("⚙️ Generar 6. Actividades Extensas"):
-        notas_combined = f"CLIENTE: {cliente}\nINTRODUCCIÓN (CAP 4): {st.session_state.text_intro}\nALCANCE (CAP 5): {st.session_state.text_alcance}"
+        es_peritaje = "Peritaje" in tipo_encargo
+        regla_vocabulario = (
+            "Utiliza terminología pericial formal (peritaje, perito, dictamen pericial)."
+            if es_peritaje else
+            "Queda ESTRICTAMENTE PROHIBIDO usar las palabras 'peritaje', 'perito', 'pericial' o 'dictamen'. Sustitúyelas únicamente por 'informe técnico', 'estudio', 'revisión contractual', 'asesoría' o 'análisis de ingeniería'."
+        )
+
+        notas_combined = f"TIPO DE ENCARGO: {tipo_encargo}\nCLIENTE: {cliente}\nINTRODUCCIÓN (CAP 4): {st.session_state.text_intro}\nALCANCE (CAP 5): {st.session_state.text_alcance}"
         prompt_tarea = (
-            "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' de forma estructurada. Estructúralo en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas minuciosamente a los puntos del alcance e hitos documentados. "
+            "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' de forma estructurada en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas minuciosamente a los puntos del alcance e hitos documentados. "
+            f"REGLA DE VOCABULARIO OBLIGATORIA: {regla_vocabulario} "
+            "REGLA DE NO CITAR NORMATIVAS O LEYES: No incluyas citas a leyes, artículos normativos, reglamentos legales ni preceptos de derecho. Limítate a describir la metodología técnica de ingeniería (revisión de libro de obras, análisis de cartas Gantt, cubicaciones, precios unitarios y trazabilidad documental). "
             "REGLA ESTRICTA DE FORMATO: No utilices símbolos de formato Markdown como '#', '##' ni '**'."
         )
 
