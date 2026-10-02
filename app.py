@@ -390,7 +390,7 @@ with tab2:
     st.markdown("##### 📌 Seleccione los Alcances Específicos a Evaluar:")
     st.caption("Marque únicamente las materias que aplican a esta propuesta.")
 
-    col_chk1, col_chk2, col_chk3 = st.columns(3)
+    col_chk1, col_chk2, col_chk3 = st.columns(4)
     with col_chk1:
         chk_plazos = st.checkbox("Plazos / Mayores Plazos", value=True)
         chk_gg = st.checkbox("Gastos Generales", value=True)
@@ -407,7 +407,8 @@ with col_chk4:
         chk_productividad = st.checkbox("Productividad")
         chk_pertinencia = st.checkbox("Pertinencia de situaciones")
            otros_alcances = st.text_input(
-        "Otros Alcances Especiales (Opcional):",
+                
+    "Otros Alcances Especiales (Opcional):",
         value="",
         placeholder="Ingrese otros puntos específicos de ingeniería contractual..."
     )
