@@ -107,9 +107,9 @@ Tu objetivo es redactar propuestas técnicas e informes con el máximo rigor de 
 REGLAS DE ORO DE REDACCIÓN Y FORMATO:
 1. ANCLAJE ESTRICTO A LOS ANTECEDENTES Y DOCUMENTOS: Utiliza EXCLUSIVAMENTE la información proporcionada en las notas del usuario y los archivos adjuntos cargados. NO inventes hechos ni asumas datos no documentados.
 2. NEUTRALIDAD TÉCNICA ABSOLUTA: Mantén un lenguaje neutral, empírico e imparcial. Prohibido usar calificativos acusatorios o legales (ej: sustituye 'incumplimiento grave' por 'desviación de la línea base').
-3. PROHIBICIÓN DE ANÁLISIS O CITAS JURÍDICAS/NORMATIVAS: Mantén el foco 100% en ingeniería civil y contractual. Queda estrictamente prohibido citar artículos de leyes, códigos legales, jurisprudencia o emitir juicios de derecho. Limítate a evaluar aspectos técnicos, físicos, financieros, presupuestarios y de plazo.
+3. PROHIBICIÓN DE ANÁLISIS O CITAS JURÍDICAS, NORMATIVAS Y MANUALES: Mantén el foco 100% en ingeniería civil y contractual empírica. Queda estrictamente prohibido citar artículos de leyes, códigos legales, reglamentos o manuales normativos (como el Manual de Carreteras u otros instrumentos regulatorios). Limítate a evaluar aspectos técnicos, físicos, financieros, presupuestarios, registros de avance y programa de obras.
 4. ESTRUCTURA EN PÁRRAFOS CONTINUOS: Redacta exclusivamente en párrafos formales de ingeniería continuos y fluídos. Queda ESTRICTAMENTE PROHIBIDO el uso de subcapítulos (ej: 4.1, 4.2), títulos secundarios, encabezados (#, ##, ###) o caracteres de formato Markdown como asteriscos de negrita (**).
-5. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda estrictamente prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
+5. ESTÁNDAR IDIEM: Redacción ejecutiva, clara y en español formal. Queda strictly prohibido entregar notas internas, explicaciones de trabajo, razonamientos o textos en inglés.
 """
 
 def crear_cache_contexto_si_aplica(client, modelo, texto_documentos):
@@ -376,7 +376,6 @@ with tab2:
     st.session_state.text_intro = intro_input
 
     if st.button("✨ Pulir y Desarrollar Capítulo 4 (Introducción con Adjuntos)"):
-        # Regla de vocabulario según tipo de encargo
         es_peritaje = "Peritaje" in tipo_encargo
         regla_vocabulario = (
             "Utiliza terminología pericial formal (peritaje, perito, dictamen pericial)."
@@ -388,20 +387,20 @@ with tab2:
         prompt_tarea = (
             f"Redacta el Capítulo 4 'Introducción / Contexto de la Obra' integrando los datos técnicos, contractuales y el contexto presente en los documentos subidos. "
             f"REGLA DE VOCABULARIO: {regla_vocabulario} "
-            "REGLA DE NO CITAR LEYES: No cites normas legales, artículos de ley ni realices interpretaciones jurídicas. Limítate al contexto técnico-contractual de ingeniería. "
+            "REGLA DE NO CITAR LEYES NI MANUALES: No cites normas legales, artículos de ley, reglamentos ni manuales normativos (como el Manual de Carreteras). Limítate al contexto técnico-contractual de ingeniería. "
             "REGLA ESTRICTA DE FORMATO: Redacta únicamente en párrafos continuos. Está PROHIBIDO incluir subcapítulos (como 4.1, 4.2), subtítulos, títulos secundarios, caracteres '#' o negritas con '**'."
         )
 
         if st.session_state.text_intro.strip() or st.session_state.texto_adjuntos.strip():
             with st.spinner("✨ Puliendo e integrando antecedentes en Capítulo 4..."):
                 texto_generado = llamar_ia_gemini(prompt_tarea, notas_combined, st.session_state.texto_adjuntos)
-                if texto_generado and not texto_generado.startswith("⚠️️"):
+                if texto_generado and not texto_generado.startswith("⚠️"):
                     st.session_state.text_intro = texto_generado
                     st.rerun()
 
     st.markdown("---")
 
-    # --- CAPÍTULO 5: ALCANCE DETALLADO Y SELECCIÓN DE MATERIAS CON PRIORIDAD ESTABLECIDA ---
+    # --- CAPÍTULO 5: ALCANCE DETALLADO Y SELECCIÓN DE MATERIAS (TODOS DESMARCADOS POR DEFECTO) ---
     st.markdown("#### 5. Alcance Detallado (Puntos a evaluar / Puntos de Prueba)")
 
     st.markdown("##### 📌 Seleccione los Alcances Específicos a Evaluar:")
@@ -409,19 +408,19 @@ with tab2:
 
     col_chk1, col_chk2, col_chk3, col_chk4 = st.columns(4)
     with col_chk1:
-        chk_pertinencia = st.checkbox("1. Estudio de Pertinencia de Situaciones", value=True)
-        chk_ingenieria = st.checkbox("2. Estudio Técnico Ingeniería y Arquitectura")
-        chk_adicionales = st.checkbox("3. Obras Adicionales / Obras Extraordinarias")
+        chk_pertinencia = st.checkbox("1. Estudio de Pertinencia de Situaciones", value=False)
+        chk_ingenieria = st.checkbox("2. Estudio Técnico Ingeniería y Arquitectura", value=False)
+        chk_adicionales = st.checkbox("3. Obras Adicionales / Obras Extraordinarias", value=False)
     with col_chk2:
-        chk_plazos = st.checkbox("4. Estudio de Impacto en Plazo", value=True)
-        chk_gg = st.checkbox("5a. Gastos Generales", value=True)
-        chk_utilidades = st.checkbox("5b. Utilidad / Lucro Cesante")
+        chk_plazos = st.checkbox("4. Estudio de Impacto en Plazo", value=False)
+        chk_gg = st.checkbox("5a. Gastos Generales", value=False)
+        chk_utilidades = st.checkbox("5b. Utilidad / Lucro Cesante", value=False)
     with col_chk3:
-        chk_multas = st.checkbox("5c. Multas / Sanciones Contractuales")
-        chk_accidente = st.checkbox("6. Accidentes / Siniestros")
-        chk_productividad = st.checkbox("7. Estudio de Pérdida de Productividad")
+        chk_multas = st.checkbox("5c. Multas / Sanciones Contractuales", value=False)
+        chk_accidente = st.checkbox("6. Accidentes / Siniestros", value=False)
+        chk_productividad = st.checkbox("7. Estudio de Pérdida de Productividad", value=False)
     with col_chk4:
-        chk_cotizacion = st.checkbox("8. Cotización / Análisis de Precios")
+        chk_cotizacion = st.checkbox("8. Cotización / Análisis de Precios", value=False)
 
     otros_alcances = st.text_input(
         "9. Otros Alcances Especiales (Opcional):",
@@ -476,7 +475,7 @@ with tab2:
         prompt_tarea = (
             "Redacta el Capítulo 5 'Alcance Detallado' en español formal. Incluye un párrafo de encuadre inicial y luego formaliza las materias seleccionadas mediante viñetas ('•') con verbos en infinitivo. "
             f"REGLA DE VOCABULARIO: {regla_vocabulario} "
-            "REGLA DE NO CITAR LEYES: No cites leyes, códigos legales ni normas de derecho. Enfócate exclusivamente en aspectos empíricos de ingeniería. "
+            "REGLA DE NO CITAR LEYES NI MANUALES: No cites leyes, códigos legales, normas de derecho ni manuales regulatorios (como el Manual de Carreteras). Enfócate exclusivamente en aspectos empíricos de ingeniería. "
             "REGLA CRÍTICA DE PRIORIDAD: Presenta y desarrolla los puntos del alcance en el ORDEN SECUENCIAL ESTRICTO indicado (del punto 1 al punto 9). NO alteres el orden jerárquico establecido ni agregues materias no seleccionadas. "
             "REGLA ESTRICTA DE FORMATO: No incluyas subcapítulos (ej: 5.1, 5.2), encabezados (#) ni caracteres '**'."
         )
@@ -503,7 +502,7 @@ with tab2:
         prompt_tarea = (
             "Redacta el Capítulo 6 'Actividades y Etapas Propuestas' de forma estructurada en Etapas secuenciales (Etapa A, Etapa B, etc.) alineadas minuciosamente a los puntos del alcance e hitos documentados. "
             f"REGLA DE VOCABULARIO OBLIGATORIA: {regla_vocabulario} "
-            "REGLA DE NO CITAR NORMATIVAS O LEYES: No incluyas citas a leyes, artículos normativos, reglamentos legales ni preceptos de derecho. Limítate a describir la metodología técnica de ingeniería (revisión de libro de obras, análisis de cartas Gantt, cubicaciones, precios unitarios y trazabilidad documental). "
+            "REGLA DE NO CITAR NORMATIVAS, LEYES NI MANUALES: No incluyas citas a leyes, artículos normativos, reglamentos legales ni manuales regulatorios (como el Manual de Carreteras u otros instrumentos MOP). Limítate a describir la metodología técnica de ingeniería (revisión de libro de obras, análisis de cartas Gantt, cubicaciones, precios unitarios y trazabilidad documental). "
             "REGLA ESTRICTA DE FORMATO: No utilices símbolos de formato Markdown como '#', '##' ni '**'."
         )
 
